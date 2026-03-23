@@ -28,38 +28,10 @@ public class SecurityConfig {
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
 
-    @Value("${app.cors.allowed-origins}")
+    // ✅ Valeur par défaut * si non définie
+    @Value("${app.cors.allowed-origins:*}")
     private String allowedOrigins;
 
-    @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
-
-    // Liste complète des URLs Swagger à autoriser
     private static final String[] SWAGGER_WHITELIST = {
             "/swagger-ui.html",
             "/swagger-ui/**",
@@ -73,24 +45,59 @@ public class SecurityConfig {
     };
 
     @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        // ✅ Compatible avec CORS_ORIGINS=* sur Render
+        if ("*".equals(allowedOrigins.trim())) {
+            config.addAllowedOriginPattern("*");
+            config.setAllowCredentials(false);
+        } else {
+            config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+            config.setAllowCredentials(true);
+        }
+
+        config.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(List.of("*"));
+        config.addExposedHeader("Authorization");
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-                // ✅ Désactiver la page de login Spring Security par défaut
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ Swagger - DOIT être en premier
+                        // Swagger
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
-
                         // Auth publique
                         .requestMatchers("/api/auth/**").permitAll()
-
                         // Console H2
                         .requestMatchers("/h2-console/**").permitAll()
-
                         // Routes publiques API
                         .requestMatchers("/api/ressources").permitAll()
                         .requestMatchers("/api/ressources/rechercher").permitAll()
@@ -98,23 +105,29 @@ public class SecurityConfig {
                         .requestMatchers("/api/niveaux/**").permitAll()
                         .requestMatchers("/api/thematiques/**").permitAll()
                         .requestMatchers("/api/tags/**").permitAll()
-
-                        // Routes réservées aux ENSEIGNANTS et ADMINS
-                        .requestMatchers("/api/ressources/creer").hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
+                        // Routes Enseignant / Admin
+                        .requestMatchers("/api/ressources/creer")
+                        .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
                         .requestMatchers("/api/ressources/*/modifier")
                         .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/supprimer").hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/valider").hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/templates/**").hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/admin/**").hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-
+                        .requestMatchers("/api/ressources/toutes")
+                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                        .requestMatchers("/api/ressources/*/valider")
+                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                        .requestMatchers("/api/ressources/*/refuser")
+                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                        .requestMatchers("/api/ressources/*/supprimer")
+                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                        .requestMatchers("/api/templates/**")
+                        .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
                         // Toutes les autres routes nécessitent une authentification
                         .anyRequest().authenticated());
 
-        // Désactiver le frameOptions pour la console H2
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
-
-        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter(),
+                UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
