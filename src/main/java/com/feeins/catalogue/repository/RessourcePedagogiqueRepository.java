@@ -30,16 +30,6 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
         // Recherche par durée maximale
         List<RessourcePedagogique> findByDureeMinutesLessThanEqual(Integer dureeMax);
 
-        // Recherche full-text sur titre et description
-        @Query("SELECT r FROM RessourcePedagogique r WHERE " +
-                        "LOWER(r.titre) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        "LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-        List<RessourcePedagogique> searchByKeyword(@Param("keyword") String keyword);
-
-        // Recherche par tag
-        @Query("SELECT r FROM RessourcePedagogique r JOIN r.tags t WHERE t.libelle = :tagLibelle")
-        List<RessourcePedagogique> findByTag(@Param("tagLibelle") String tagLibelle);
-
         // Recherche combinée (critères multiples)
         @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
                         "LEFT JOIN r.tags t " +
@@ -48,13 +38,19 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         "AND (:typeSupport IS NULL OR r.typeSupport = :typeSupport) " +
                         "AND (:difficulte IS NULL OR r.difficulte = :difficulte) " +
                         "AND (:dureeMax IS NULL OR r.dureeMinutes <= :dureeMax) " +
+                        "AND (:keyword IS NULL OR :keyword = '' OR " +
+                        "LOWER(r.titre) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                        "AND (:tag IS NULL OR :tag = '' OR LOWER(t.libelle) = LOWER(:tag)) " +
                         "AND r.statut = 'VALIDEE'")
         List<RessourcePedagogique> rechercherAvecCriteres(
                         @Param("niveauId") Long niveauId,
                         @Param("thematiqueId") Long thematiqueId,
                         @Param("typeSupport") RessourcePedagogique.TypeSupport typeSupport,
                         @Param("difficulte") RessourcePedagogique.Difficulte difficulte,
-                        @Param("dureeMax") Integer dureeMax);
+                        @Param("dureeMax") Integer dureeMax,
+                        @Param("keyword") String keyword,
+                        @Param("tag") String tag);
 
         // Par créateur
         List<RessourcePedagogique> findByCreateurId(Long createurId);

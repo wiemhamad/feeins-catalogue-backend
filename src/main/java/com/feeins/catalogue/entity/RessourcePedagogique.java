@@ -1,8 +1,10 @@
 package com.feeins.catalogue.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,6 +53,10 @@ public class RessourcePedagogique {
     // Nomenclature générée automatiquement (ex: FEEINS-VIDEO-L3-SANTE-001)
     @Column(unique = true)
     private String nomenclature;
+
+    @CreationTimestamp
+    @Column(name = "date_creation", updatable = false)
+    private LocalDateTime dateCreation;
 
     // Statut de validation
     @Enumerated(EnumType.STRING)
