@@ -109,21 +109,14 @@ public class RessourcePedagogiqueService {
     // ===== RECHERCHE AVANCÉE =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> rechercherRessources(RechercheRequestDTO criteres) {
-        List<RessourcePedagogique> resultats;
-
-        // Si mot-clé fourni, chercher par texte
-        if (criteres.getKeyword() != null && !criteres.getKeyword().isBlank()) {
-            resultats = ressourceRepo.searchByKeyword(criteres.getKeyword());
-        } else if (criteres.getTag() != null && !criteres.getTag().isBlank()) {
-            resultats = ressourceRepo.findByTag(criteres.getTag());
-        } else {
-            resultats = ressourceRepo.rechercherAvecCriteres(
-                    criteres.getNiveauId(),
-                    criteres.getThematiqueId(),
-                    criteres.getTypeSupport(),
-                    criteres.getDifficulte(),
-                    criteres.getDureeMax());
-        }
+        List<RessourcePedagogique> resultats = ressourceRepo.rechercherAvecCriteres(
+                criteres.getNiveauId(),
+                criteres.getThematiqueId(),
+                criteres.getTypeSupport(),
+                criteres.getDifficulte(),
+                criteres.getDureeMax(),
+                criteres.getKeyword(),
+                criteres.getTag());
 
         return resultats.stream().map(this::toDTO).collect(Collectors.toList());
     }
@@ -199,6 +192,7 @@ public class RessourcePedagogiqueService {
                 .objectifsPedagogiques(r.getObjectifsPedagogiques())
                 .competencesVisees(r.getCompetencesVisees())
                 .nomenclature(r.getNomenclature())
+                .dateCreation(r.getDateCreation())
                 .statut(r.getStatut())
                 .niveauNom(r.getNiveau() != null ? r.getNiveau().getNom() : null)
                 .thematiqueNom(r.getThematique() != null ? r.getThematique().getNom() : null)

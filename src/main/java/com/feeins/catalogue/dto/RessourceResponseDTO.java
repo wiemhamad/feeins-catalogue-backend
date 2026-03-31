@@ -3,6 +3,7 @@ package com.feeins.catalogue.dto;
 import com.feeins.catalogue.entity.RessourcePedagogique;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -25,6 +26,7 @@ public class RessourceResponseDTO {
     private String objectifsPedagogiques;
     private String competencesVisees;
     private String nomenclature;
+    private LocalDateTime dateCreation;
     private RessourcePedagogique.StatutRessource statut;
 
     // Relations simplifiées
