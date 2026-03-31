@@ -1,6 +1,8 @@
 package com.feeins.catalogue.controller;
 
 import com.feeins.catalogue.dto.*;
+import com.feeins.catalogue.entity.RessourcePedagogique;
+import com.feeins.catalogue.repository.RessourcePedagogiqueRepository;
 import com.feeins.catalogue.service.RessourcePedagogiqueService;
 import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.responses.*;
@@ -13,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ressources")
@@ -22,6 +25,8 @@ public class RessourcePedagogiqueController {
 
     @Autowired
     private RessourcePedagogiqueService ressourceService;
+    @Autowired
+    private RessourcePedagogiqueRepository ressourceRepo;
 
     @Operation(summary = "Lister toutes les ressources validées", description = "Retourne uniquement les ressources avec statut VALIDEE. Accessible sans authentification.")
     @GetMapping
@@ -128,6 +133,30 @@ public class RessourcePedagogiqueController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
+    }
+
+    @Operation(summary = "Marquer une ressource comme vérifiée", security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/{id}/verifier")
+    @PreAuthorize("hasRole('ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<?> marquerVerifiee(@PathVariable Long id) {
+
+        return ressourceRepo.findById(id).map(r -> {
+            r.setDerniereVerification(java.time.LocalDate.now());
+            ressourceRepo.save(r);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Ressource marquée comme vérifiée",
+                    "date", r.getDerniereVerification()));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Lister les évaluations sommatives (risque doublon)", security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/alertes/evaluations-sommatives")
+    @PreAuthorize("hasRole('ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<?> alertesEvaluationsSommatives() {
+        List<RessourcePedagogique> risques = ressourceRepo.findAll().stream()
+                .filter(r -> r.getUsagePedagogique() == RessourcePedagogique.UsagePedagogique.EVALUATION_SOMMATIVE)
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(risques);
     }
 
     @Operation(summary = "Retirer un tag d'une ressource", security = @SecurityRequirement(name = "bearerAuth"))

@@ -10,7 +10,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RessourceRequestDTO {
-
+    private RessourcePedagogique.UsagePedagogique usagePedagogique;
+    private RessourcePedagogique.Droits droits;
+    private String usageMoodle;
+    private String auteurPartenaire;
     @NotBlank(message = "Le titre est obligatoire")
     private String titre;
 

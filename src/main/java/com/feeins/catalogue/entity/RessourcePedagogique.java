@@ -3,6 +3,7 @@ package com.feeins.catalogue.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -87,7 +88,42 @@ public class RessourcePedagogique {
     @ManyToOne
     @JoinColumn(name = "contributeur_id")
     private Contributeur contributeur;
+    // ===== NOUVEAUX CHAMPS =====
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "usage_pedagogique")
+    private UsagePedagogique usagePedagogique;
+
+    @Column(name = "usage_moodle", columnDefinition = "TEXT")
+    private String usageMoodle; // ex: "SIS-L3-CM1, Master-IA-TD2"
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "droits")
+    private Droits droits = Droits.FEEINS_INTERNE;
+
+    @Column(name = "derniere_verification")
+    private LocalDate derniereVerification;
+
+    @Column(name = "auteur_partenaire")
+    private String auteurPartenaire;
+
+    // ===== NOUVEAUX ENUMS (à ajouter dans la classe) =====
+
+    public enum UsagePedagogique {
+        COURS,
+        ACTIVITE,
+        EVALUATION_FORMATIVE,
+        EVALUATION_SOMMATIVE,
+        RESSOURCE_COMPLEMENTAIRE,
+        QUIZ_POSITIONNEMENT
+    }
+
+    public enum Droits {
+        LIBRE,
+        FEEINS_INTERNE,
+        PARTENAIRE,
+        SOUS_LICENCE
+    }
     // ===== ENUMS =====
 
     public enum TypeSupport {

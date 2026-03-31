@@ -10,7 +10,11 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class RessourceResponseDTO {
-
+    private RessourcePedagogique.UsagePedagogique usagePedagogique;
+    private RessourcePedagogique.Droits droits;
+    private String usageMoodle;
+    private String auteurPartenaire;
+    private java.time.LocalDate derniereVerification;
     private Long id;
     private String titre;
     private String description;

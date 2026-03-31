@@ -40,6 +40,17 @@ public class RessourcePedagogiqueService {
         // Générer la nomenclature automatiquement
         ressource.setNomenclature(genererNomenclature(ressource));
         ressource.setStatut(RessourcePedagogique.StatutRessource.EN_ATTENTE);
+        if (dto.getUsagePedagogique() != null)
+            ressource.setUsagePedagogique(dto.getUsagePedagogique());
+
+        ressource.setDroits(
+                dto.getDroits() != null ? dto.getDroits() : RessourcePedagogique.Droits.FEEINS_INTERNE);
+
+        if (dto.getUsageMoodle() != null)
+            ressource.setUsageMoodle(dto.getUsageMoodle());
+
+        if (dto.getAuteurPartenaire() != null)
+            ressource.setAuteurPartenaire(dto.getAuteurPartenaire());
 
         return toDTO(ressourceRepo.save(ressource));
     }
@@ -194,6 +205,12 @@ public class RessourcePedagogiqueService {
                 .tags(r.getTags().stream().map(Tag::getLibelle).collect(Collectors.toList()))
                 .templateNom(r.getTemplate() != null ? r.getTemplate().getNom() : null)
                 .createurNom(r.getCreateur() != null ? r.getCreateur().getNom() : null)
+                // ✅ NOUVEAUX CHAMPS
+                .usagePedagogique(r.getUsagePedagogique())
+                .droits(r.getDroits())
+                .usageMoodle(r.getUsageMoodle())
+                .auteurPartenaire(r.getAuteurPartenaire())
+                .derniereVerification(r.getDerniereVerification())
                 .build();
     }
 }
