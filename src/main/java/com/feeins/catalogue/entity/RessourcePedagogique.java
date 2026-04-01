@@ -63,6 +63,9 @@ public class RessourcePedagogique {
     @Enumerated(EnumType.STRING)
     private StatutRessource statut = StatutRessource.EN_ATTENTE;
 
+    @Column(nullable = false)
+    private Boolean visible = true;
+
     // ===== RELATIONS =====
 
     // Niveau (appartient à)
