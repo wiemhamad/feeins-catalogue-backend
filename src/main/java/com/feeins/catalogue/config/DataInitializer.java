@@ -100,5 +100,37 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("   → marion@feeins.fr / prof123");
             System.out.println("   → Code d'accès : " + teacherAccessCode);
         }
+        if (tagRepo.count() == 0) {
+            // Thématiques FEEINS
+            tagRepo.save(new Tag(null, "si-sante"));
+            tagRepo.save(new Tag(null, "interoperabilite"));
+            tagRepo.save(new Tag(null, "iot"));
+            tagRepo.save(new Tag(null, "ia-sante"));
+            tagRepo.save(new Tag(null, "rgpd"));
+            tagRepo.save(new Tag(null, "telemedicine"));
+            tagRepo.save(new Tag(null, "parcours-soins"));
+            tagRepo.save(new Tag(null, "ethique"));
+
+            // Types de contenu
+            tagRepo.save(new Tag(null, "h5p-cle-en-main"));
+            tagRepo.save(new Tag(null, "h5p-modifiable"));
+            tagRepo.save(new Tag(null, "cours-cle-en-main"));
+            tagRepo.save(new Tag(null, "cours-modifiable"));
+            tagRepo.save(new Tag(null, "dialog-cards"));
+
+            // Usage pédagogique
+            tagRepo.save(new Tag(null, "evaluation-formative"));
+            tagRepo.save(new Tag(null, "evaluation-sommative"));
+            tagRepo.save(new Tag(null, "test-diagnostique"));
+            tagRepo.save(new Tag(null, "glossaire"));
+            tagRepo.save(new Tag(null, "banque-questions"));
+
+            // Parcours
+            tagRepo.save(new Tag(null, "decouvrir"));
+            tagRepo.save(new Tag(null, "approfondir"));
+            tagRepo.save(new Tag(null, "expertise"));
+
+            System.out.println("✅ Tags FEEINS initialisés");
+        }
     }
 }

@@ -61,4 +61,26 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
         // Dernière ressource créée pour générer la nomenclature
         @Query("SELECT COUNT(r) FROM RessourcePedagogique r WHERE r.typeSupport = :type")
         Long countByTypeSupport(@Param("type") RessourcePedagogique.TypeSupport type);
+
+        @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
+                        "LEFT JOIN r.tags t " +
+                        "WHERE (:niveauId IS NULL OR r.niveau.id = :niveauId) " +
+                        "AND (:thematiqueId IS NULL OR r.thematique.id = :thematiqueId) " +
+                        "AND (:typeSupport IS NULL OR r.typeSupport = :typeSupport) " +
+                        "AND (:difficulte IS NULL OR r.difficulte = :difficulte) " +
+                        "AND (:dureeMax IS NULL OR r.dureeMinutes <= :dureeMax) " +
+                        "AND (:keyword IS NULL OR LOWER(r.titre) LIKE LOWER(CONCAT('%',:keyword,'%')) " +
+                        "     OR LOWER(r.description) LIKE LOWER(CONCAT('%',:keyword,'%'))) " +
+                        "AND (:tag IS NULL OR t.libelle = :tag) " +
+                        "AND (:usagePedagogique IS NULL OR r.usagePedagogique = :usagePedagogique) " +
+                        "AND r.statut = 'VALIDEE'")
+        List<RessourcePedagogique> rechercherAvecCriteres(
+                        @Param("niveauId") Long niveauId,
+                        @Param("thematiqueId") Long thematiqueId,
+                        @Param("typeSupport") RessourcePedagogique.TypeSupport typeSupport,
+                        @Param("difficulte") RessourcePedagogique.Difficulte difficulte,
+                        @Param("dureeMax") Integer dureeMax,
+                        @Param("keyword") String keyword,
+                        @Param("tag") String tag,
+                        @Param("usagePedagogique") RessourcePedagogique.UsagePedagogique usagePedagogique);
 }

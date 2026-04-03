@@ -164,15 +164,22 @@ public class RessourcePedagogiqueService {
         entity.setObjectifsPedagogiques(dto.getObjectifsPedagogiques());
         entity.setCompetencesVisees(dto.getCompetencesVisees());
 
-        if (dto.getNiveauId() != null) {
+        // ✅ NOUVEAUX CHAMPS
+        if (dto.getUsagePedagogique() != null)
+            entity.setUsagePedagogique(dto.getUsagePedagogique());
+        if (dto.getDroits() != null)
+            entity.setDroits(dto.getDroits());
+        if (dto.getUsageMoodle() != null)
+            entity.setUsageMoodle(dto.getUsageMoodle());
+        if (dto.getAuteurPartenaire() != null)
+            entity.setAuteurPartenaire(dto.getAuteurPartenaire());
+
+        if (dto.getNiveauId() != null)
             niveauRepo.findById(dto.getNiveauId()).ifPresent(entity::setNiveau);
-        }
-        if (dto.getThematiqueId() != null) {
+        if (dto.getThematiqueId() != null)
             thematiqueRepo.findById(dto.getThematiqueId()).ifPresent(entity::setThematique);
-        }
-        if (dto.getTemplateId() != null) {
+        if (dto.getTemplateId() != null)
             templateRepo.findById(dto.getTemplateId()).ifPresent(entity::setTemplate);
-        }
         if (dto.getTagIds() != null) {
             List<Tag> tags = tagRepo.findAllById(dto.getTagIds());
             entity.setTags(tags);
