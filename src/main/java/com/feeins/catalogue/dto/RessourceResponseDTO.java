@@ -3,6 +3,7 @@ package com.feeins.catalogue.dto;
 import com.feeins.catalogue.entity.RessourcePedagogique;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,11 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class RessourceResponseDTO {
-    private RessourcePedagogique.UsagePedagogique usagePedagogique;
-    private RessourcePedagogique.Droits droits;
-    private String usageMoodle;
-    private String auteurPartenaire;
-    private java.time.LocalDate derniereVerification;
     private Long id;
     private String titre;
     private String description;
@@ -35,5 +31,14 @@ public class RessourceResponseDTO {
     private String thematiqueNom;
     private List<String> tags;
     private String templateNom;
-    private String createurNom;
+
+    // Créateur = Contributeur (consultant pédagogique)
+    private String contributeurNom;
+
+    // Métadonnées
+    private RessourcePedagogique.UsagePedagogique usagePedagogique;
+    private RessourcePedagogique.Droits droits;
+    private String usageMoodle;
+    private String auteurPartenaire;
+    private LocalDate derniereVerification;
 }

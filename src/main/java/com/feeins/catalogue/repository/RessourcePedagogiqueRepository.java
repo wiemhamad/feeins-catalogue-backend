@@ -22,23 +22,27 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
 
         List<RessourcePedagogique> findByStatut(RessourcePedagogique.StatutRessource statut);
 
-        // ✅ Utilisé par listerRessourcesValidees() — visible=true obligatoire
+        // Ressources validées et visibles (accessibles sans authentification)
         List<RessourcePedagogique> findByStatutAndVisibleTrueOrderByDateCreationDesc(
                         RessourcePedagogique.StatutRessource statut);
 
         List<RessourcePedagogique> findByDureeMinutesLessThanEqual(Integer dureeMax);
 
-        List<RessourcePedagogique> findByCreateurId(Long createurId);
+        // Ressources du contributeur connecté (par son ID)
+        List<RessourcePedagogique> findByContributeurId(Long contributeurId);
 
-        List<RessourcePedagogique> findByCreateurEmailOrderByDateCreationDesc(String email);
+        // Ressources du contributeur connecté (par son email)
+        List<RessourcePedagogique> findByContributeurEmailOrderByDateCreationDesc(String email);
 
         Optional<RessourcePedagogique> findByNomenclature(String nomenclature);
 
         @Query("SELECT COUNT(r) FROM RessourcePedagogique r WHERE r.typeSupport = :type")
         Long countByTypeSupport(@Param("type") RessourcePedagogique.TypeSupport type);
 
-        // ✅ UNE SEULE méthode rechercherAvecCriteres — inclut usagePedagogique
-        // Le service appelle maintenant cette version unifiée
+        /**
+         * Recherche multicritères publique — accessible sans authentification.
+         * Retourne uniquement les ressources VALIDEES et visibles.
+         */
         @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
                         "LEFT JOIN r.tags t " +
                         "WHERE (:niveauId IS NULL OR r.niveau.id = :niveauId) " +

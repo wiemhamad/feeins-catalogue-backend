@@ -9,6 +9,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Ressource pédagogique (grain) créée par un Contributeur (consultant
+ * pédagogique)
+ * et validée par un AdministrateurPedagogique.
+ * L'Enseignant n'en crée pas : il crée des templates à partir de ressources
+ * existantes.
+ */
 @Entity
 @Table(name = "ressources_pedagogiques")
 @Data
@@ -83,28 +90,29 @@ public class RessourcePedagogique {
     @JoinTable(name = "ressource_tags", joinColumns = @JoinColumn(name = "ressource_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private List<Tag> tags = new ArrayList<>();
 
-    // Template pédagogique (utilise)
+    // Template pédagogique (utilise) — créé par l'enseignant
     @ManyToOne
     @JoinColumn(name = "template_id")
     private TemplatePedagogique template;
 
-    // Créateur (Enseignant)
-    @ManyToOne
-    @JoinColumn(name = "createur_id")
-    private Enseignant createur;
-
-    // Contributeur (proposé par)
+    /**
+     * CRÉATEUR = Contributeur (consultant pédagogique).
+     * C'est lui qui propose/crée les ressources.
+     * L'Enseignant ne crée PAS de ressources.
+     */
     @ManyToOne
     @JoinColumn(name = "contributeur_id")
     private Contributeur contributeur;
-    // ===== NOUVEAUX CHAMPS =====
+
+    // ===== CHAMPS MÉTADONNÉES =====
 
     @Enumerated(EnumType.STRING)
     @Column(name = "usage_pedagogique")
     private UsagePedagogique usagePedagogique;
 
+    // ex: "SIS-L3-CM1, Master-IA-TD2" — où est utilisée cette ressource dans Moodle
     @Column(name = "usage_moodle", columnDefinition = "TEXT")
-    private String usageMoodle; // ex: "SIS-L3-CM1, Master-IA-TD2"
+    private String usageMoodle;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "droits")
@@ -116,7 +124,7 @@ public class RessourcePedagogique {
     @Column(name = "auteur_partenaire")
     private String auteurPartenaire;
 
-    // ===== NOUVEAUX ENUMS (à ajouter dans la classe) =====
+    // ===== ENUMS =====
 
     public enum UsagePedagogique {
         COURS,
@@ -133,7 +141,6 @@ public class RessourcePedagogique {
         PARTENAIRE,
         SOUS_LICENCE
     }
-    // ===== ENUMS =====
 
     public enum TypeSupport {
         VIDEO, H5P, PDF, QUIZ, HTML, LIEN, AUTRE

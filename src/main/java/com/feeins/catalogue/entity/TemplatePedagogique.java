@@ -6,6 +6,10 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Template pédagogique créé par un Enseignant,
+ * à partir de ressources existantes déjà validées.
+ */
 @Entity
 @Table(name = "templates_pedagogiques")
 @Data
@@ -26,6 +30,12 @@ public class TemplatePedagogique {
     @Column(nullable = false)
     private Boolean modifiable = true; // true = modifiable, false = clé en main
 
+    // L'enseignant qui a créé ce template
+    @ManyToOne
+    @JoinColumn(name = "createur_template_id")
+    private Enseignant createurTemplate;
+
+    // Ressources associées à ce template
     @OneToMany(mappedBy = "template")
     private List<RessourcePedagogique> ressources = new ArrayList<>();
 }

@@ -26,30 +26,32 @@ public class RessourcePedagogiqueService {
     private TagRepository tagRepo;
     @Autowired
     private TemplatePedagogiqueRepository templateRepo;
-    @Autowired
-    private EnseignantRepository enseignantRepo;
 
-    // ===== CRÉER =====
+    /**
+     * Le Contributeur (consultant pédagogique) est le créateur des ressources.
+     * L'Enseignant NE crée PAS de ressources.
+     */
+    @Autowired
+    private ContributeurRepository contributeurRepo;
+
+    // ===== CRÉER (par le Contributeur) =====
     public RessourceResponseDTO creerRessource(RessourceRequestDTO dto) {
         RessourcePedagogique ressource = new RessourcePedagogique();
         mapDtoToEntity(dto, ressource);
 
-        // Récupérer l'enseignant connecté
+        // Récupérer le contributeur connecté comme créateur
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        enseignantRepo.findByEmail(email).ifPresent(ressource::setCreateur);
+        contributeurRepo.findByEmail(email).ifPresent(ressource::setContributeur);
 
         // Générer la nomenclature automatiquement
         ressource.setNomenclature(genererNomenclature(ressource));
         ressource.setStatut(RessourcePedagogique.StatutRessource.EN_ATTENTE);
+
         if (dto.getUsagePedagogique() != null)
             ressource.setUsagePedagogique(dto.getUsagePedagogique());
-
-        ressource.setDroits(
-                dto.getDroits() != null ? dto.getDroits() : RessourcePedagogique.Droits.FEEINS_INTERNE);
-
+        ressource.setDroits(dto.getDroits() != null ? dto.getDroits() : RessourcePedagogique.Droits.FEEINS_INTERNE);
         if (dto.getUsageMoodle() != null)
             ressource.setUsageMoodle(dto.getUsageMoodle());
-
         if (dto.getAuteurPartenaire() != null)
             ressource.setAuteurPartenaire(dto.getAuteurPartenaire());
 
@@ -60,11 +62,12 @@ public class RessourcePedagogiqueService {
     public RessourceResponseDTO modifierRessource(Long id, RessourceRequestDTO dto) {
         RessourcePedagogique ressource = ressourceRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ressource introuvable : " + id));
+        verifierDroitModification(ressource);
         mapDtoToEntity(dto, ressource);
         return toDTO(ressourceRepo.save(ressource));
     }
 
-    // ===== VALIDER (Admin Péda) =====
+    // ===== VALIDER (AdministrateurPedagogique uniquement) =====
     public RessourceResponseDTO validerRessource(Long id) {
         RessourcePedagogique ressource = ressourceRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ressource introuvable : " + id));
@@ -72,7 +75,7 @@ public class RessourcePedagogiqueService {
         return toDTO(ressourceRepo.save(ressource));
     }
 
-    // ===== REFUSER =====
+    // ===== REFUSER (AdministrateurPedagogique uniquement) =====
     public RessourceResponseDTO refuserRessource(Long id) {
         RessourcePedagogique ressource = ressourceRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ressource introuvable : " + id));
@@ -85,7 +88,7 @@ public class RessourcePedagogiqueService {
         ressourceRepo.deleteById(id);
     }
 
-    // ===== CONSULTER =====
+    // ===== CONSULTER (public, sans authentification) =====
     @Transactional(readOnly = true)
     public RessourceResponseDTO consulterRessource(Long id) {
         return ressourceRepo.findById(id)
@@ -93,7 +96,7 @@ public class RessourcePedagogiqueService {
                 .orElseThrow(() -> new RuntimeException("Ressource introuvable : " + id));
     }
 
-    // ===== LISTE TOUTES (validées) =====
+    // ===== LISTE VALIDÉES (public, sans authentification) =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> listerRessourcesValidees() {
         return ressourceRepo.findByStatutAndVisibleTrueOrderByDateCreationDesc(
@@ -101,24 +104,24 @@ public class RessourcePedagogiqueService {
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    // ===== TOUTES (admin) =====
+    // ===== TOUTES (admin seulement) =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> listerToutesRessources() {
         return ressourceRepo.findAll()
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    // ===== RESSOURCES DU CONTRIBUTEUR CONNECTÉ =====
     @Transactional(readOnly = true)
-    public List<RessourceResponseDTO> listerRessourcesDuCreateurConnecte() {
+    public List<RessourceResponseDTO> listerRessourcesDuContributeurConnecte() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ressourceRepo.findByCreateurEmailOrderByDateCreationDesc(email)
+        return ressourceRepo.findByContributeurEmailOrderByDateCreationDesc(email)
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    // ===== RECHERCHE AVANCÉE =====
+    // ===== RECHERCHE AVANCÉE (public, sans authentification) =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> rechercherRessources(RechercheRequestDTO criteres) {
-        // ✅ Appel unique avec tous les critères dont usagePedagogique
         List<RessourcePedagogique> resultats = ressourceRepo.rechercherAvecCriteres(
                 criteres.getNiveauId(),
                 criteres.getThematiqueId(),
@@ -128,7 +131,6 @@ public class RessourcePedagogiqueService {
                 criteres.getKeyword(),
                 criteres.getTag(),
                 criteres.getUsagePedagogique());
-
         return resultats.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
@@ -153,7 +155,6 @@ public class RessourcePedagogiqueService {
     public RessourceResponseDTO modifierVisibilite(Long id, boolean visible) {
         RessourcePedagogique ressource = ressourceRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ressource introuvable : " + id));
-
         verifierDroitModification(ressource);
         ressource.setVisible(visible);
         return toDTO(ressourceRepo.save(ressource));
@@ -184,7 +185,6 @@ public class RessourcePedagogiqueService {
         entity.setObjectifsPedagogiques(dto.getObjectifsPedagogiques());
         entity.setCompetencesVisees(dto.getCompetencesVisees());
 
-        // ✅ NOUVEAUX CHAMPS
         if (dto.getUsagePedagogique() != null)
             entity.setUsagePedagogique(dto.getUsagePedagogique());
         if (dto.getDroits() != null)
@@ -198,8 +198,6 @@ public class RessourcePedagogiqueService {
             niveauRepo.findById(dto.getNiveauId()).ifPresent(entity::setNiveau);
         if (dto.getThematiqueId() != null)
             thematiqueRepo.findById(dto.getThematiqueId()).ifPresent(entity::setThematique);
-        if (dto.getTemplateId() != null)
-            templateRepo.findById(dto.getTemplateId()).ifPresent(entity::setTemplate);
         if (dto.getTagIds() != null) {
             List<Tag> tags = tagRepo.findAllById(dto.getTagIds());
             entity.setTags(tags);
@@ -226,8 +224,8 @@ public class RessourcePedagogiqueService {
                 .thematiqueNom(r.getThematique() != null ? r.getThematique().getNom() : null)
                 .tags(r.getTags().stream().map(Tag::getLibelle).collect(Collectors.toList()))
                 .templateNom(r.getTemplate() != null ? r.getTemplate().getNom() : null)
-                .createurNom(r.getCreateur() != null ? r.getCreateur().getNom() : null)
-                // ✅ NOUVEAUX CHAMPS
+                // Créateur = Contributeur
+                .contributeurNom(r.getContributeur() != null ? r.getContributeur().getNom() : null)
                 .usagePedagogique(r.getUsagePedagogique())
                 .droits(r.getDroits())
                 .usageMoodle(r.getUsageMoodle())
@@ -236,16 +234,21 @@ public class RessourcePedagogiqueService {
                 .build();
     }
 
+    /**
+     * Vérifie que l'utilisateur connecté peut modifier la ressource.
+     * - Un ADMINISTRATEUR_PEDAGOGIQUE peut tout modifier.
+     * - Un CONTRIBUTEUR ne peut modifier que ses propres ressources.
+     */
     private void verifierDroitModification(RessourcePedagogique ressource) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMINISTRATEUR_PEDAGOGIQUE".equals(authority.getAuthority()));
+                .anyMatch(a -> "ROLE_ADMINISTRATEUR_PEDAGOGIQUE".equals(a.getAuthority()));
 
-        if (isAdmin) {
+        if (isAdmin)
             return;
-        }
 
-        if (ressource.getCreateur() == null || !email.equalsIgnoreCase(ressource.getCreateur().getEmail())) {
+        if (ressource.getContributeur() == null ||
+                !email.equalsIgnoreCase(ressource.getContributeur().getEmail())) {
             throw new AccessDeniedException("Vous ne pouvez modifier que vos propres ressources");
         }
     }

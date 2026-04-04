@@ -28,13 +28,17 @@ public class RessourcePedagogiqueController {
     @Autowired
     private RessourcePedagogiqueRepository ressourceRepo;
 
-    @Operation(summary = "Lister toutes les ressources validées", description = "Retourne uniquement les ressources avec statut VALIDEE. Accessible sans authentification.")
+    // =====================================================================
+    // ACCÈS PUBLIC — sans authentification
+    // =====================================================================
+
+    @Operation(summary = "Lister toutes les ressources validées", description = "Accessible sans authentification. Retourne uniquement les ressources VALIDEES et visibles.")
     @GetMapping
     public ResponseEntity<List<RessourceResponseDTO>> listerRessourcesValidees() {
         return ResponseEntity.ok(ressourceService.listerRessourcesValidees());
     }
 
-    @Operation(summary = "Consulter une ressource par ID")
+    @Operation(summary = "Consulter une ressource par ID", description = "Accessible sans authentification.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Ressource trouvée"),
             @ApiResponse(responseCode = "404", description = "Ressource introuvable")
@@ -48,53 +52,22 @@ public class RessourcePedagogiqueController {
         }
     }
 
-    @Operation(summary = "Recherche avancée de ressources", description = "Recherche multicritères : keyword, niveauId, thematiqueId, typeSupport (VIDEO/H5P/PDF/QUIZ/HTML/LIEN), difficulte (DEBUTANT/INTERMEDIAIRE/AVANCE), dureeMax (en minutes), tag.")
+    @Operation(summary = "Recherche avancée de ressources", description = "Accessible sans authentification. Multicritères : keyword, niveauId, thematiqueId, typeSupport, difficulte, dureeMax, tag, usagePedagogique.")
     @PostMapping("/rechercher")
     public ResponseEntity<List<RessourceResponseDTO>> rechercherRessources(
             @RequestBody RechercheRequestDTO criteres) {
         return ResponseEntity.ok(ressourceService.rechercherRessources(criteres));
     }
 
-    @Operation(summary = "Lister TOUTES les ressources (tous statuts)", description = "Admin seulement.", security = @SecurityRequirement(name = "bearerAuth"))
+    // =====================================================================
+    // ACCÈS ADMIN — AdministrateurPedagogique uniquement
+    // =====================================================================
+
+    @Operation(summary = "Lister TOUTES les ressources (tous statuts)", description = "Administrateur pédagogique uniquement.", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/toutes")
     @PreAuthorize("hasRole('ADMINISTRATEUR_PEDAGOGIQUE')")
     public ResponseEntity<List<RessourceResponseDTO>> listerToutesRessources() {
         return ResponseEntity.ok(ressourceService.listerToutesRessources());
-    }
-
-    @Operation(summary = "Lister les ressources du createur connecte", security = @SecurityRequirement(name = "bearerAuth"))
-    @GetMapping("/mes-ressources")
-    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
-    public ResponseEntity<List<RessourceResponseDTO>> listerMesRessources() {
-        return ResponseEntity.ok(ressourceService.listerRessourcesDuCreateurConnecte());
-    }
-
-    @Operation(summary = "Créer une nouvelle ressource pédagogique", description = "Crée une ressource avec statut EN_ATTENTE. Nomenclature générée automatiquement : FEEINS-{TYPE}-{NIVEAU}-{SEQUENCE}.", security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Ressource créée"),
-            @ApiResponse(responseCode = "403", description = "Rôle ENSEIGNANT ou ADMIN requis")
-    })
-    @PostMapping("/creer")
-    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
-    public ResponseEntity<?> creerRessource(@Valid @RequestBody RessourceRequestDTO dto) {
-        try {
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ressourceService.creerRessource(dto));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
-    }
-
-    @Operation(summary = "Modifier une ressource existante", security = @SecurityRequirement(name = "bearerAuth"))
-    @PutMapping("/{id}/modifier")
-    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
-    public ResponseEntity<?> modifierRessource(@PathVariable Long id,
-            @Valid @RequestBody RessourceRequestDTO dto) {
-        try {
-            return ResponseEntity.ok(ressourceService.modifierRessource(id, dto));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
     }
 
     @Operation(summary = "Valider une ressource (EN_ATTENTE → VALIDEE)", security = @SecurityRequirement(name = "bearerAuth"))
@@ -131,22 +104,10 @@ public class RessourcePedagogiqueController {
         }
     }
 
-    @Operation(summary = "Ajouter un tag à une ressource", security = @SecurityRequirement(name = "bearerAuth"))
-    @PostMapping("/{id}/tags/{tagId}")
-    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
-    public ResponseEntity<?> ajouterTag(@PathVariable Long id, @PathVariable Long tagId) {
-        try {
-            return ResponseEntity.ok(ressourceService.ajouterTag(id, tagId));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
-    }
-
-    @Operation(summary = "Marquer une ressource comme vérifiée", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Marquer une ressource comme vérifiée (maintenance annuelle)", security = @SecurityRequirement(name = "bearerAuth"))
     @PutMapping("/{id}/verifier")
     @PreAuthorize("hasRole('ADMINISTRATEUR_PEDAGOGIQUE')")
     public ResponseEntity<?> marquerVerifiee(@PathVariable Long id) {
-
         return ressourceRepo.findById(id).map(r -> {
             r.setDerniereVerification(java.time.LocalDate.now());
             ressourceRepo.save(r);
@@ -156,19 +117,7 @@ public class RessourcePedagogiqueController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Modifier la visibilite d'une ressource", security = @SecurityRequirement(name = "bearerAuth"))
-    @PutMapping("/{id}/visibilite")
-    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
-    public ResponseEntity<?> modifierVisibilite(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
-        try {
-            boolean visible = Boolean.TRUE.equals(body.get("visible"));
-            return ResponseEntity.ok(ressourceService.modifierVisibilite(id, visible));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
-    }
-
-    @Operation(summary = "Lister les évaluations sommatives (risque doublon)", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Alertes : évaluations sommatives (risque de doublon)", description = "Permet de détecter les ressources utilisées à la fois en évaluation formative et sommative.", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/alertes/evaluations-sommatives")
     @PreAuthorize("hasRole('ADMINISTRATEUR_PEDAGOGIQUE')")
     public ResponseEntity<?> alertesEvaluationsSommatives() {
@@ -178,9 +127,76 @@ public class RessourcePedagogiqueController {
         return ResponseEntity.ok(risques);
     }
 
+    // =====================================================================
+    // ACCÈS CONTRIBUTEUR — crée et gère ses propres ressources
+    // =====================================================================
+
+    @Operation(summary = "Mes ressources (contributeur connecté)", description = "Retourne les ressources proposées par le contributeur actuellement connecté.", security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/mes-ressources")
+    @PreAuthorize("hasAnyRole('CONTRIBUTEUR', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<List<RessourceResponseDTO>> listerMesRessources() {
+        return ResponseEntity.ok(ressourceService.listerRessourcesDuContributeurConnecte());
+    }
+
+    @Operation(summary = "Créer une nouvelle ressource pédagogique", description = "Réservé au CONTRIBUTEUR (consultant pédagogique). La ressource est créée avec statut EN_ATTENTE et doit être validée par l'administrateur pédagogique.", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Ressource créée"),
+            @ApiResponse(responseCode = "403", description = "Rôle CONTRIBUTEUR requis")
+    })
+    @PostMapping("/creer")
+    @PreAuthorize("hasAnyRole('CONTRIBUTEUR', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<?> creerRessource(@Valid @RequestBody RessourceRequestDTO dto) {
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ressourceService.creerRessource(dto));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Modifier une ressource existante", description = "Le contributeur ne peut modifier que ses propres ressources. L'admin peut tout modifier.", security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/{id}/modifier")
+    @PreAuthorize("hasAnyRole('CONTRIBUTEUR', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<?> modifierRessource(@PathVariable Long id,
+            @Valid @RequestBody RessourceRequestDTO dto) {
+        try {
+            return ResponseEntity.ok(ressourceService.modifierRessource(id, dto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Modifier la visibilité d'une ressource", security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/{id}/visibilite")
+    @PreAuthorize("hasAnyRole('CONTRIBUTEUR', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<?> modifierVisibilite(@PathVariable Long id,
+            @RequestBody Map<String, Boolean> body) {
+        try {
+            boolean visible = Boolean.TRUE.equals(body.get("visible"));
+            return ResponseEntity.ok(ressourceService.modifierVisibilite(id, visible));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    // =====================================================================
+    // GESTION DES TAGS — Contributeur et Admin
+    // =====================================================================
+
+    @Operation(summary = "Ajouter un tag à une ressource", security = @SecurityRequirement(name = "bearerAuth"))
+    @PostMapping("/{id}/tags/{tagId}")
+    @PreAuthorize("hasAnyRole('CONTRIBUTEUR', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<?> ajouterTag(@PathVariable Long id, @PathVariable Long tagId) {
+        try {
+            return ResponseEntity.ok(ressourceService.ajouterTag(id, tagId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
     @Operation(summary = "Retirer un tag d'une ressource", security = @SecurityRequirement(name = "bearerAuth"))
     @DeleteMapping("/{id}/tags/{tagId}")
-    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    @PreAuthorize("hasAnyRole('CONTRIBUTEUR', 'ADMINISTRATEUR_PEDAGOGIQUE')")
     public ResponseEntity<?> supprimerTag(@PathVariable Long id, @PathVariable Long tagId) {
         try {
             return ResponseEntity.ok(ressourceService.supprimerTag(id, tagId));

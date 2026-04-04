@@ -19,8 +19,6 @@ public class AuthService {
     @Autowired
     private UtilisateurRepository utilisateurRepo;
     @Autowired
-    private EnseignantRepository enseignantRepo;
-    @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
     private JwtUtils jwtUtils;
@@ -31,7 +29,8 @@ public class AuthService {
     // ===== CONNEXION =====
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getMotDePasse()));
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(), request.getMotDePasse()));
 
         String jwt = jwtUtils.generateJwtToken(authentication);
 
@@ -50,7 +49,6 @@ public class AuthService {
 
     // ===== INSCRIPTION =====
     public AuthResponse register(RegisterRequest request) {
-        // Vérifier email unique
         if (utilisateurRepo.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email déjà utilisé : " + request.getEmail());
         }
@@ -59,14 +57,18 @@ public class AuthService {
                 ? request.getTypeUtilisateur()
                 : Utilisateur.TypeUtilisateur.ETUDIANT;
 
-        // VÉRIFICATION DU CODE D'ACCÈS pour Enseignant et Admin Péda
+        // Rôles nécessitant un code d'accès :
+        // - ENSEIGNANT (crée des templates)
+        // - CONTRIBUTEUR (crée des ressources / consultant pédagogique)
+        // - ADMINISTRATEUR_PEDAGOGIQUE (valide les ressources)
         boolean rolePrivilegie = type == Utilisateur.TypeUtilisateur.ENSEIGNANT
+                || type == Utilisateur.TypeUtilisateur.CONTRIBUTEUR
                 || type == Utilisateur.TypeUtilisateur.ADMINISTRATEUR_PEDAGOGIQUE;
 
         if (rolePrivilegie) {
             if (request.getCodeAccesEnseignant() == null ||
                     !request.getCodeAccesEnseignant().equals(teacherAccessCode)) {
-                throw new RuntimeException("Code d'accès enseignant invalide ou manquant");
+                throw new RuntimeException("Code d'accès invalide ou manquant");
             }
         }
 
@@ -86,38 +88,43 @@ public class AuthService {
     }
 
     // ===== CRÉATION ENTITÉ SELON TYPE =====
-    private Utilisateur creerUtilisateur(RegisterRequest request, Utilisateur.TypeUtilisateur type) {
-        String motDePasseEncode = passwordEncoder.encode(request.getMotDePasse());
+    private Utilisateur creerUtilisateur(RegisterRequest request,
+            Utilisateur.TypeUtilisateur type) {
+        String mdp = passwordEncoder.encode(request.getMotDePasse());
 
         return switch (type) {
             case ENSEIGNANT -> {
                 Enseignant e = new Enseignant();
                 e.setNom(request.getNom());
                 e.setEmail(request.getEmail());
-                e.setMotDePasse(motDePasseEncode);
+                e.setMotDePasse(mdp);
                 e.setRole(request.getRole());
                 e.setSpecialite(request.getSpecialite());
                 yield e;
+            }
+            case CONTRIBUTEUR -> {
+                // Le Contributeur = consultant pédagogique : crée et propose des ressources
+                Contributeur c = new Contributeur();
+                c.setNom(request.getNom());
+                c.setEmail(request.getEmail());
+                c.setMotDePasse(mdp);
+                c.setOrganisation(request.getOrganisation());
+                yield c;
             }
             case ADMINISTRATEUR_PEDAGOGIQUE -> {
                 AdministrateurPedagogique a = new AdministrateurPedagogique();
                 a.setNom(request.getNom());
                 a.setEmail(request.getEmail());
-                a.setMotDePasse(motDePasseEncode);
+                a.setMotDePasse(mdp);
                 yield a;
             }
-            case CONTRIBUTEUR -> {
-                Contributeur c = new Contributeur();
-                c.setNom(request.getNom());
-                c.setEmail(request.getEmail());
-                c.setMotDePasse(motDePasseEncode);
-                yield c;
-            }
+            // ETUDIANT et CONSULTANT_EXTERNE : pas besoin de s'authentifier pour consulter
+            // mais peuvent créer un compte pour accéder à des fonctionnalités futures
             default -> {
                 Etudiant et = new Etudiant();
                 et.setNom(request.getNom());
                 et.setEmail(request.getEmail());
-                et.setMotDePasse(motDePasseEncode);
+                et.setMotDePasse(mdp);
                 yield et;
             }
         };
