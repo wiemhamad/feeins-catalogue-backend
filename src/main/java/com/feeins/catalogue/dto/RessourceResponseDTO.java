@@ -28,6 +28,7 @@ public class RessourceResponseDTO {
     private String nomenclature;
     private LocalDateTime dateCreation;
     private RessourcePedagogique.StatutRessource statut;
+    private Boolean visible;
 
     // Relations simplifiées
     private String niveauNom;

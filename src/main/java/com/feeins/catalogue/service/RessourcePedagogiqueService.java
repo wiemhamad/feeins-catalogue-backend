@@ -4,6 +4,7 @@ import com.feeins.catalogue.dto.*;
 import com.feeins.catalogue.entity.*;
 import com.feeins.catalogue.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -95,7 +96,8 @@ public class RessourcePedagogiqueService {
     // ===== LISTE TOUTES (validées) =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> listerRessourcesValidees() {
-        return ressourceRepo.findByStatut(RessourcePedagogique.StatutRessource.VALIDEE)
+        return ressourceRepo.findByStatutAndVisibleTrueOrderByDateCreationDesc(
+                RessourcePedagogique.StatutRessource.VALIDEE)
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
@@ -103,6 +105,13 @@ public class RessourcePedagogiqueService {
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> listerToutesRessources() {
         return ressourceRepo.findAll()
+                .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<RessourceResponseDTO> listerRessourcesDuCreateurConnecte() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ressourceRepo.findByCreateurEmailOrderByDateCreationDesc(email)
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
@@ -136,6 +145,15 @@ public class RessourcePedagogiqueService {
         RessourcePedagogique ressource = ressourceRepo.findById(ressourceId)
                 .orElseThrow(() -> new RuntimeException("Ressource introuvable"));
         ressource.getTags().removeIf(t -> t.getId().equals(tagId));
+        return toDTO(ressourceRepo.save(ressource));
+    }
+
+    public RessourceResponseDTO modifierVisibilite(Long id, boolean visible) {
+        RessourcePedagogique ressource = ressourceRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ressource introuvable : " + id));
+
+        verifierDroitModification(ressource);
+        ressource.setVisible(visible);
         return toDTO(ressourceRepo.save(ressource));
     }
 
@@ -201,6 +219,7 @@ public class RessourcePedagogiqueService {
                 .nomenclature(r.getNomenclature())
                 .dateCreation(r.getDateCreation())
                 .statut(r.getStatut())
+                .visible(Boolean.TRUE.equals(r.getVisible()))
                 .niveauNom(r.getNiveau() != null ? r.getNiveau().getNom() : null)
                 .thematiqueNom(r.getThematique() != null ? r.getThematique().getNom() : null)
                 .tags(r.getTags().stream().map(Tag::getLibelle).collect(Collectors.toList()))
@@ -213,5 +232,19 @@ public class RessourcePedagogiqueService {
                 .auteurPartenaire(r.getAuteurPartenaire())
                 .derniereVerification(r.getDerniereVerification())
                 .build();
+    }
+
+    private void verifierDroitModification(RessourcePedagogique ressource) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMINISTRATEUR_PEDAGOGIQUE".equals(authority.getAuthority()));
+
+        if (isAdmin) {
+            return;
+        }
+
+        if (ressource.getCreateur() == null || !email.equalsIgnoreCase(ressource.getCreateur().getEmail())) {
+            throw new AccessDeniedException("Vous ne pouvez modifier que vos propres ressources");
+        }
     }
 }

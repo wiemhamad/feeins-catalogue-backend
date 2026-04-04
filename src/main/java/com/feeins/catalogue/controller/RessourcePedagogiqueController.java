@@ -62,6 +62,13 @@ public class RessourcePedagogiqueController {
         return ResponseEntity.ok(ressourceService.listerToutesRessources());
     }
 
+    @Operation(summary = "Lister les ressources du createur connecte", security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/mes-ressources")
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<List<RessourceResponseDTO>> listerMesRessources() {
+        return ResponseEntity.ok(ressourceService.listerRessourcesDuCreateurConnecte());
+    }
+
     @Operation(summary = "Créer une nouvelle ressource pédagogique", description = "Crée une ressource avec statut EN_ATTENTE. Nomenclature générée automatiquement : FEEINS-{TYPE}-{NIVEAU}-{SEQUENCE}.", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Ressource créée"),
@@ -147,6 +154,18 @@ public class RessourcePedagogiqueController {
                     "message", "Ressource marquée comme vérifiée",
                     "date", r.getDerniereVerification()));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Modifier la visibilite d'une ressource", security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/{id}/visibilite")
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<?> modifierVisibilite(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
+        try {
+            boolean visible = Boolean.TRUE.equals(body.get("visible"));
+            return ResponseEntity.ok(ressourceService.modifierVisibilite(id, visible));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 
     @Operation(summary = "Lister les évaluations sommatives (risque doublon)", security = @SecurityRequirement(name = "bearerAuth"))

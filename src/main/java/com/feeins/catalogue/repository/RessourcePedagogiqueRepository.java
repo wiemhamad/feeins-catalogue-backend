@@ -27,6 +27,9 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
         // Recherche par statut
         List<RessourcePedagogique> findByStatut(RessourcePedagogique.StatutRessource statut);
 
+        List<RessourcePedagogique> findByStatutAndVisibleTrueOrderByDateCreationDesc(
+                        RessourcePedagogique.StatutRessource statut);
+
         // Recherche par durée maximale
         List<RessourcePedagogique> findByDureeMinutesLessThanEqual(Integer dureeMax);
 
@@ -42,7 +45,8 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         "LOWER(r.titre) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                         "LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
                         "AND (:tag IS NULL OR :tag = '' OR LOWER(t.libelle) = LOWER(:tag)) " +
-                        "AND r.statut = 'VALIDEE'")
+                        "AND r.statut = 'VALIDEE' " +
+                        "AND r.visible = true")
         List<RessourcePedagogique> rechercherAvecCriteres(
                         @Param("niveauId") Long niveauId,
                         @Param("thematiqueId") Long thematiqueId,
@@ -54,6 +58,8 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
 
         // Par créateur
         List<RessourcePedagogique> findByCreateurId(Long createurId);
+
+        List<RessourcePedagogique> findByCreateurEmailOrderByDateCreationDesc(String email);
 
         // Par nomenclature
         Optional<RessourcePedagogique> findByNomenclature(String nomenclature);

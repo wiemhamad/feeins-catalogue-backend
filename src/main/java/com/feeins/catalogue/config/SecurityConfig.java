@@ -108,7 +108,11 @@ public class SecurityConfig {
                         // Routes Enseignant / Admin
                         .requestMatchers("/api/ressources/creer")
                         .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
+                        .requestMatchers("/api/ressources/mes-ressources")
+                        .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
                         .requestMatchers("/api/ressources/*/modifier")
+                        .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
+                        .requestMatchers("/api/ressources/*/visibilite")
                         .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
                         .requestMatchers("/api/ressources/toutes")
                         .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
