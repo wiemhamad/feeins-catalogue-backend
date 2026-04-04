@@ -1,5 +1,6 @@
 package com.feeins.catalogue.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -31,11 +32,13 @@ public class TemplatePedagogique {
     private Boolean modifiable = true; // true = modifiable, false = clé en main
 
     // L'enseignant qui a créé ce template
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "createur_template_id")
     private Enseignant createurTemplate;
 
     // Ressources associées à ce template
+    @JsonIgnore
     @OneToMany(mappedBy = "template")
     private List<RessourcePedagogique> ressources = new ArrayList<>();
 }

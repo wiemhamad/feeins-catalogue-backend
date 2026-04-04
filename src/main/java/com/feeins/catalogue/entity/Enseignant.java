@@ -1,5 +1,6 @@
 package com.feeins.catalogue.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +29,7 @@ public class Enseignant extends Utilisateur {
     private String specialite;
 
     // L'enseignant crée des templates à partir de ressources existantes
+    @JsonIgnore
     @OneToMany(mappedBy = "createurTemplate", cascade = CascadeType.ALL)
     private List<TemplatePedagogique> templatesCreees = new ArrayList<>();
 }

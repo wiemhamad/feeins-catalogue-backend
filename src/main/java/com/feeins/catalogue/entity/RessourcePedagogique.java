@@ -1,5 +1,6 @@
 package com.feeins.catalogue.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import lombok.*;
@@ -91,6 +92,7 @@ public class RessourcePedagogique {
     private List<Tag> tags = new ArrayList<>();
 
     // Template pédagogique (utilise) — créé par l'enseignant
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "template_id")
     private TemplatePedagogique template;

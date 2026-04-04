@@ -36,6 +36,14 @@ public class TemplatePedagogiqueController {
     @Autowired
     private EnseignantRepository enseignantRepo;
 
+    // ===== ACCÈS PUBLIC — étudiants et visiteurs =====
+
+    @Operation(summary = "Lister les templates (accès public)", description = "Accessible sans authentification. Retourne tous les templates avec leurs ressources associées.")
+    @GetMapping("/public")
+    public List<TemplatePedagogique> listerTemplatesPublic() {
+        return templateRepo.findAll();
+    }
+
     // ===== LISTER =====
 
     @Operation(summary = "Lister tous les templates", security = @SecurityRequirement(name = "bearerAuth"))

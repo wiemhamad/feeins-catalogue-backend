@@ -42,6 +42,7 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
         /**
          * Recherche multicritères publique — accessible sans authentification.
          * Retourne uniquement les ressources VALIDEES et visibles.
+         * Filtre par un seul tag (libellé exact) — conservé pour compatibilité.
          */
         @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
                         "LEFT JOIN r.tags t " +
@@ -65,5 +66,34 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         @Param("dureeMax") Integer dureeMax,
                         @Param("keyword") String keyword,
                         @Param("tag") String tag,
+                        @Param("usagePedagogique") RessourcePedagogique.UsagePedagogique usagePedagogique);
+
+        /**
+         * Recherche multicritères avec MULTI-TAGS (logique OR).
+         * Retourne les ressources possédant AU MOINS un des tags de la liste.
+         * Si la liste est vide / null, aucun filtre sur les tags.
+         */
+        @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
+                        "LEFT JOIN r.tags t " +
+                        "WHERE (:niveauId IS NULL OR r.niveau.id = :niveauId) " +
+                        "AND (:thematiqueId IS NULL OR r.thematique.id = :thematiqueId) " +
+                        "AND (:typeSupport IS NULL OR r.typeSupport = :typeSupport) " +
+                        "AND (:difficulte IS NULL OR r.difficulte = :difficulte) " +
+                        "AND (:dureeMax IS NULL OR r.dureeMinutes <= :dureeMax) " +
+                        "AND (:keyword IS NULL OR :keyword = '' OR " +
+                        "LOWER(r.titre) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+                        "AND (:#{#tags == null || #tags.isEmpty()} = true OR LOWER(t.libelle) IN :tags) " +
+                        "AND (:usagePedagogique IS NULL OR r.usagePedagogique = :usagePedagogique) " +
+                        "AND r.statut = 'VALIDEE' " +
+                        "AND r.visible = true")
+        List<RessourcePedagogique> rechercherAvecCriteresEtTags(
+                        @Param("niveauId") Long niveauId,
+                        @Param("thematiqueId") Long thematiqueId,
+                        @Param("typeSupport") RessourcePedagogique.TypeSupport typeSupport,
+                        @Param("difficulte") RessourcePedagogique.Difficulte difficulte,
+                        @Param("dureeMax") Integer dureeMax,
+                        @Param("keyword") String keyword,
+                        @Param("tags") List<String> tags,
                         @Param("usagePedagogique") RessourcePedagogique.UsagePedagogique usagePedagogique);
 }

@@ -55,144 +55,147 @@ import java.util.List;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+        @Autowired
+        private UserDetailsServiceImpl userDetailsService;
 
-    @Value("${app.cors.allowed-origins:*}")
-    private String allowedOrigins;
+        @Value("${app.cors.allowed-origins:*}")
+        private String allowedOrigins;
 
-    private static final String[] SWAGGER_WHITELIST = {
-            "/swagger-ui.html",
-            "/swagger-ui/**",
-            "/v3/api-docs",
-            "/v3/api-docs/**",
-            "/v3/api-docs.yaml",
-            "/swagger-resources",
-            "/swagger-resources/**",
-            "/webjars/**",
-            "/favicon.ico"
-    };
+        private static final String[] SWAGGER_WHITELIST = {
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs.yaml",
+                        "/swagger-resources",
+                        "/swagger-resources/**",
+                        "/webjars/**",
+                        "/favicon.ico"
+        };
 
-    @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-
-        if ("*".equals(allowedOrigins.trim())) {
-            config.addAllowedOriginPattern("*");
-            config.setAllowCredentials(false);
-        } else {
-            config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-            config.setAllowCredentials(true);
+        @Bean
+        public JwtAuthenticationFilter jwtAuthenticationFilter() {
+                return new JwtAuthenticationFilter();
         }
 
-        config.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("*"));
-        config.addExposedHeader("Authorization");
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration config) throws Exception {
+                return config.getAuthenticationManager();
+        }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration config = new CorsConfiguration();
 
-                        // Swagger
-                        .requestMatchers(SWAGGER_WHITELIST).permitAll()
+                if ("*".equals(allowedOrigins.trim())) {
+                        config.addAllowedOriginPattern("*");
+                        config.setAllowCredentials(false);
+                } else {
+                        config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+                        config.setAllowCredentials(true);
+                }
 
-                        // Auth publique (login / register)
-                        .requestMatchers("/api/auth/**").permitAll()
+                config.setAllowedMethods(Arrays.asList(
+                                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+                config.setAllowedHeaders(List.of("*"));
+                config.addExposedHeader("Authorization");
 
-                        // Console H2
-                        .requestMatchers("/h2-console/**").permitAll()
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return source;
+        }
 
-                        // =====================================================
-                        // ACCÈS PUBLIC — l'étudiant (et tout visiteur) consulte
-                        // sans avoir besoin de s'authentifier
-                        // =====================================================
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/api/ressources")
-                        .permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/api/ressources/{id}")
-                        .permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.POST,
-                                "/api/ressources/rechercher")
-                        .permitAll()
-                        .requestMatchers("/api/niveaux/**").permitAll()
-                        .requestMatchers("/api/thematiques/**").permitAll()
-                        .requestMatchers("/api/tags/**").permitAll()
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .csrf(csrf -> csrf.disable())
+                                .formLogin(form -> form.disable())
+                                .httpBasic(basic -> basic.disable())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
 
-                        // =====================================================
-                        // CONTRIBUTEUR — crée et gère ses ressources
-                        // =====================================================
-                        .requestMatchers("/api/ressources/creer")
-                        .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/mes-ressources")
-                        .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/modifier")
-                        .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/visibilite")
-                        .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/tags/**")
-                        .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
+                                                // Swagger
+                                                .requestMatchers(SWAGGER_WHITELIST).permitAll()
 
-                        // =====================================================
-                        // ENSEIGNANT — crée et gère des templates
-                        // =====================================================
-                        .requestMatchers("/api/templates/**")
-                        .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
+                                                // Auth publique (login / register)
+                                                .requestMatchers("/api/auth/**").permitAll()
 
-                        // =====================================================
-                        // ADMINISTRATEUR_PEDAGOGIQUE — valide/refuse/administre
-                        // =====================================================
-                        .requestMatchers("/api/ressources/toutes")
-                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/valider")
-                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/refuser")
-                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/supprimer")
-                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/*/verifier")
-                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/ressources/alertes/**")
-                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
-                        .requestMatchers("/api/admin/**")
-                        .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                                                // Console H2
+                                                .requestMatchers("/h2-console/**").permitAll()
 
-                        // Toutes les autres routes nécessitent une authentification
-                        .anyRequest().authenticated());
+                                                // =====================================================
+                                                // ACCÈS PUBLIC — l'étudiant (et tout visiteur) consulte
+                                                // sans avoir besoin de s'authentifier
+                                                // =====================================================
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/ressources")
+                                                .permitAll()
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/ressources/{id}")
+                                                .permitAll()
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/ressources/rechercher")
+                                                .permitAll()
+                                                .requestMatchers("/api/niveaux/**").permitAll()
+                                                .requestMatchers("/api/thematiques/**").permitAll()
+                                                .requestMatchers("/api/tags/**").permitAll()
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/templates/public")
+                                                .permitAll()
 
-        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
-        http.addFilterBefore(jwtAuthenticationFilter(),
-                UsernamePasswordAuthenticationFilter.class);
+                                                // =====================================================
+                                                // CONTRIBUTEUR — crée et gère ses ressources
+                                                // =====================================================
+                                                .requestMatchers("/api/ressources/creer")
+                                                .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/mes-ressources")
+                                                .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/*/modifier")
+                                                .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/*/visibilite")
+                                                .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/*/tags/**")
+                                                .hasAnyRole("CONTRIBUTEUR", "ADMINISTRATEUR_PEDAGOGIQUE")
 
-        return http.build();
-    }
+                                                // =====================================================
+                                                // ENSEIGNANT — crée et gère des templates
+                                                // =====================================================
+                                                .requestMatchers("/api/templates/**")
+                                                .hasAnyRole("ENSEIGNANT", "ADMINISTRATEUR_PEDAGOGIQUE")
+
+                                                // =====================================================
+                                                // ADMINISTRATEUR_PEDAGOGIQUE — valide/refuse/administre
+                                                // =====================================================
+                                                .requestMatchers("/api/ressources/toutes")
+                                                .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/*/valider")
+                                                .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/*/refuser")
+                                                .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/*/supprimer")
+                                                .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/*/verifier")
+                                                .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/ressources/alertes/**")
+                                                .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+                                                .requestMatchers("/api/admin/**")
+                                                .hasRole("ADMINISTRATEUR_PEDAGOGIQUE")
+
+                                                // Toutes les autres routes nécessitent une authentification
+                                                .anyRequest().authenticated());
+
+                http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+                http.addFilterBefore(jwtAuthenticationFilter(),
+                                UsernamePasswordAuthenticationFilter.class);
+
+                return http.build();
+        }
 }
