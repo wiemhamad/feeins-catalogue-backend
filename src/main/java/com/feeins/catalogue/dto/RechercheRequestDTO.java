@@ -15,4 +15,6 @@ public class RechercheRequestDTO {
     private RessourcePedagogique.Difficulte difficulte;
     private Integer dureeMax;
     private String tag;
+    // ✅ Ajout du filtre usage pédagogique
+    private RessourcePedagogique.UsagePedagogique usagePedagogique;
 }

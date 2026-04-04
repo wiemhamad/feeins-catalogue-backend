@@ -118,6 +118,7 @@ public class RessourcePedagogiqueService {
     // ===== RECHERCHE AVANCÉE =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> rechercherRessources(RechercheRequestDTO criteres) {
+        // ✅ Appel unique avec tous les critères dont usagePedagogique
         List<RessourcePedagogique> resultats = ressourceRepo.rechercherAvecCriteres(
                 criteres.getNiveauId(),
                 criteres.getThematiqueId(),
@@ -125,7 +126,8 @@ public class RessourcePedagogiqueService {
                 criteres.getDifficulte(),
                 criteres.getDureeMax(),
                 criteres.getKeyword(),
-                criteres.getTag());
+                criteres.getTag(),
+                criteres.getUsagePedagogique());
 
         return resultats.stream().map(this::toDTO).collect(Collectors.toList());
     }

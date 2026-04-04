@@ -51,15 +51,34 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         if (tagRepo.count() == 0) {
+            // Thématiques FEEINS
+            tagRepo.save(new Tag(null, "si-sante"));
+            tagRepo.save(new Tag(null, "interoperabilite"));
+            tagRepo.save(new Tag(null, "iot"));
+            tagRepo.save(new Tag(null, "ia-sante"));
             tagRepo.save(new Tag(null, "rgpd"));
-            tagRepo.save(new Tag(null, "ia"));
-            tagRepo.save(new Tag(null, "santé"));
-            tagRepo.save(new Tag(null, "vidéo"));
-            tagRepo.save(new Tag(null, "quiz"));
-            tagRepo.save(new Tag(null, "interactif"));
-            tagRepo.save(new Tag(null, "feeins"));
-            tagRepo.save(new Tag(null, "numérique"));
-            System.out.println("✅ Tags initialisés");
+            tagRepo.save(new Tag(null, "telemedicine"));
+            tagRepo.save(new Tag(null, "parcours-soins"));
+            tagRepo.save(new Tag(null, "ethique"));
+            tagRepo.save(new Tag(null, "cybersecurite"));
+            tagRepo.save(new Tag(null, "dpi"));
+            // Types de contenu
+            tagRepo.save(new Tag(null, "h5p-cle-en-main"));
+            tagRepo.save(new Tag(null, "h5p-modifiable"));
+            tagRepo.save(new Tag(null, "cours-cle-en-main"));
+            tagRepo.save(new Tag(null, "cours-modifiable"));
+            tagRepo.save(new Tag(null, "dialog-cards"));
+            // Usage pédagogique
+            tagRepo.save(new Tag(null, "evaluation-formative"));
+            tagRepo.save(new Tag(null, "evaluation-sommative"));
+            tagRepo.save(new Tag(null, "test-diagnostique"));
+            tagRepo.save(new Tag(null, "glossaire"));
+            tagRepo.save(new Tag(null, "banque-questions"));
+            // Parcours FEEINS
+            tagRepo.save(new Tag(null, "decouvrir-esante"));
+            tagRepo.save(new Tag(null, "approfondir"));
+            tagRepo.save(new Tag(null, "expertise-metier"));
+            System.out.println("✅ Tags FEEINS initialisés");
         }
 
         if (templateRepo.count() == 0) {
