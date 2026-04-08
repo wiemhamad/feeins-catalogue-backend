@@ -147,6 +147,12 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/niveaux/**").permitAll()
                                                 .requestMatchers("/api/thematiques/**").permitAll()
                                                 .requestMatchers("/api/tags/**").permitAll()
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/templates/public")
+                                                .permitAll()
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/templates/public/**")
+                                                .permitAll()
 
                                                 // =====================================================
                                                 // CONTRIBUTEUR — crée et gère ses ressources

@@ -1,13 +1,9 @@
 package com.feeins.catalogue.controller;
 
-import com.feeins.catalogue.dto.RessourceResponseDTO;
-import com.feeins.catalogue.entity.Enseignant;
-import com.feeins.catalogue.entity.RessourcePedagogique;
-import com.feeins.catalogue.entity.TemplatePedagogique;
-import com.feeins.catalogue.repository.EnseignantRepository;
-import com.feeins.catalogue.repository.RessourcePedagogiqueRepository;
-import com.feeins.catalogue.repository.TemplatePedagogiqueRepository;
+import com.feeins.catalogue.entity.*;
+import com.feeins.catalogue.repository.*;
 import com.feeins.catalogue.service.RessourcePedagogiqueService;
+import com.feeins.catalogue.dto.RessourceResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,7 +19,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/templates")
 @CrossOrigin(origins = "*")
-@Tag(name = "📋 Templates Pédagogiques", description = "Modèles de scénarios pédagogiques")
+@Tag(name = "📋 Templates Pédagogiques")
 public class TemplatePedagogiqueController {
 
     @Autowired
@@ -35,32 +31,42 @@ public class TemplatePedagogiqueController {
     @Autowired
     private RessourcePedagogiqueService ressourceService;
 
-    // ===== ACCÈS PUBLIC =====
+    // ===== ACCÈS PUBLIC (étudiants et visiteurs) =====
 
-    @Operation(summary = "Lister les templates (accès public)")
+    @Operation(summary = "Lister tous les templates — public")
     @GetMapping("/public")
-    public List<TemplatePedagogique> listerTemplatesPublic() {
+    public List<TemplatePedagogique> listerPublic() {
         return templateRepo.findAll();
     }
 
+    @Operation(summary = "Détail d'un template — public")
+    @GetMapping("/public/{id}")
+    public ResponseEntity<TemplatePedagogique> detailPublic(@PathVariable Long id) {
+        return templateRepo.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     /**
-     * Ressources associées à un template — PUBLIC
-     * Retourne uniquement les ressources VALIDÉES du template
+     * Ressources d'un template — PUBLIC
+     * Retourne uniquement les ressources VALIDÉES associées à ce template.
+     * C'est ce que voit l'étudiant quand il clique sur un template.
      */
-    @Operation(summary = "Ressources d'un template (public)")
-    @GetMapping("/{id}/ressources")
-    public ResponseEntity<List<RessourceResponseDTO>> getRessourcesTemplate(@PathVariable Long id) {
+    @Operation(summary = "Ressources d'un template — public")
+    @GetMapping("/public/{id}/ressources")
+    public ResponseEntity<List<RessourceResponseDTO>> ressourcesPublic(@PathVariable Long id) {
         return templateRepo.findById(id).map(template -> {
-            List<RessourcePedagogique> ressources = ressourceRepo.findByTemplateId(id);
-            List<RessourceResponseDTO> dtos = ressources.stream()
-                    .filter(r -> r.getStatut() == RessourcePedagogique.StatutRessource.VALIDEE)
+            List<RessourceResponseDTO> dtos = ressourceRepo.findByTemplateId(id)
+                    .stream()
+                    .filter(r -> r.getStatut() == RessourcePedagogique.StatutRessource.VALIDEE
+                            && Boolean.TRUE.equals(r.getVisible()))
                     .map(ressourceService::toDTO)
                     .collect(Collectors.toList());
             return ResponseEntity.ok(dtos);
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // ===== LISTER (authentifié) =====
+    // ===== ACCÈS AUTHENTIFIÉ =====
 
     @Operation(summary = "Lister tous les templates", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping
@@ -83,8 +89,6 @@ public class TemplatePedagogiqueController {
         return templateRepo.findByModifiable(true);
     }
 
-    // ===== CRÉER =====
-
     @Operation(summary = "Créer un template", security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
@@ -93,8 +97,6 @@ public class TemplatePedagogiqueController {
         enseignantRepo.findByEmail(email).ifPresent(template::setCreateurTemplate);
         return ResponseEntity.status(HttpStatus.CREATED).body(templateRepo.save(template));
     }
-
-    // ===== MODIFIER =====
 
     @Operation(summary = "Modifier un template", security = @SecurityRequirement(name = "bearerAuth"))
     @PutMapping("/{id}")
@@ -116,8 +118,6 @@ public class TemplatePedagogiqueController {
             return ResponseEntity.ok(templateRepo.save(existing));
         }).orElse(ResponseEntity.notFound().build());
     }
-
-    // ===== SUPPRIMER =====
 
     @Operation(summary = "Supprimer un template", security = @SecurityRequirement(name = "bearerAuth"))
     @DeleteMapping("/{id}")
