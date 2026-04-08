@@ -15,13 +15,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/niveaux")
 @CrossOrigin(origins = "*")
-@Tag(name = "🎓 Niveaux", description = "Référentiel des niveaux pédagogiques (L3, Master, Ingénieur...)")
+@Tag(name = "🎓 Niveaux", description = "Référentiel des niveaux pédagogiques")
 public class NiveauController {
 
     @Autowired
     private NiveauRepository niveauRepo;
 
-    @Operation(summary = "Lister tous les niveaux", description = "Accessible sans authentification.")
+    @Operation(summary = "Lister tous les niveaux")
     @GetMapping
     public List<Niveau> listerNiveaux() {
         return niveauRepo.findAll();
@@ -32,6 +32,16 @@ public class NiveauController {
     @PreAuthorize("hasRole('ADMINISTRATEUR_PEDAGOGIQUE')")
     public ResponseEntity<Niveau> creerNiveau(@RequestBody Niveau niveau) {
         return ResponseEntity.status(HttpStatus.CREATED).body(niveauRepo.save(niveau));
+    }
+
+    @Operation(summary = "Modifier un niveau", security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<Niveau> modifierNiveau(@PathVariable Long id, @RequestBody Niveau niveau) {
+        return niveauRepo.findById(id).map(existing -> {
+            existing.setNom(niveau.getNom());
+            return ResponseEntity.ok(niveauRepo.save(existing));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @Operation(summary = "Supprimer un niveau", security = @SecurityRequirement(name = "bearerAuth"))
