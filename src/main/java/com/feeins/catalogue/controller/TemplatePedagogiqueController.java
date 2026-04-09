@@ -11,10 +11,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import com.feeins.catalogue.dto.AssocierRessourcesDTO;
 import java.util.stream.Collectors;
 
 @RestController
@@ -135,15 +137,14 @@ public class TemplatePedagogiqueController {
      */
     @Operation(summary = "Associer des ressources à un template", security = @SecurityRequirement(name = "bearerAuth"))
     @PutMapping("/{id}/ressources")
+    @Transactional
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
     public ResponseEntity<?> associerRessources(
             @PathVariable Long id,
-            @RequestBody Map<String, List<Long>> body) {
+            @RequestBody AssocierRessourcesDTO body) {
 
         return templateRepo.findById(id).map(template -> {
-            List<Long> ressourceIds = body.get("ressourceIds");
-            if (ressourceIds == null)
-                ressourceIds = List.of();
+            List<Long> ressourceIds = body.getRessourceIds() != null ? body.getRessourceIds() : List.of();
 
             // D'abord, détacher toutes les ressources actuellement liées à ce template
             ressourceRepo.findByTemplateId(id).forEach(r -> {
