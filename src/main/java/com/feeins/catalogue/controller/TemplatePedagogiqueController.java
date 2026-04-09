@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -125,5 +126,51 @@ public class TemplatePedagogiqueController {
     public ResponseEntity<Void> supprimerTemplate(@PathVariable Long id) {
         templateRepo.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Associer une liste de ressources à un template.
+     * L'enseignant envoie { "ressourceIds": [1, 2, 3] }
+     * Le backend met à jour le champ template_id dans chaque ressource.
+     */
+    @Operation(summary = "Associer des ressources à un template", security = @SecurityRequirement(name = "bearerAuth"))
+    @PutMapping("/{id}/ressources")
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public ResponseEntity<?> associerRessources(
+            @PathVariable Long id,
+            @RequestBody Map<String, List<Long>> body) {
+
+        return templateRepo.findById(id).map(template -> {
+            List<Long> ressourceIds = body.get("ressourceIds");
+            if (ressourceIds == null)
+                ressourceIds = List.of();
+
+            // D'abord, détacher toutes les ressources actuellement liées à ce template
+            ressourceRepo.findByTemplateId(id).forEach(r -> {
+                r.setTemplate(null);
+                ressourceRepo.save(r);
+            });
+
+            // Ensuite, attacher les nouvelles ressources sélectionnées
+            final TemplatePedagogique t = template;
+            for (Long rid : ressourceIds) {
+                ressourceRepo.findById(rid).ifPresent(r -> {
+                    r.setTemplate(t);
+                    ressourceRepo.save(r);
+                });
+            }
+
+            // Retourner le template avec les ressources mises à jour
+            List<RessourceResponseDTO> dtos = ressourceRepo.findByTemplateId(id)
+                    .stream()
+                    .map(ressourceService::toDTO)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Ressources associées avec succès",
+                    "templateId", id,
+                    "nbRessources", dtos.size(),
+                    "ressources", dtos));
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

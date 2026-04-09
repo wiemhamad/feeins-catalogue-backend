@@ -122,36 +122,15 @@ public class RessourcePedagogiqueService {
     // ===== RECHERCHE AVANCÉE (public, sans authentification) =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> rechercherRessources(RechercheRequestDTO criteres) {
-        List<RessourcePedagogique> resultats;
-
-        // Priorité aux multi-tags s'ils sont fournis
-        if (criteres.getTags() != null && !criteres.getTags().isEmpty()) {
-            // Normaliser en minuscules pour la comparaison LOWER() côté JPQL
-            List<String> tagsNormalises = criteres.getTags().stream()
-                    .map(String::toLowerCase)
-                    .collect(Collectors.toList());
-            resultats = ressourceRepo.rechercherAvecCriteresEtTags(
-                    criteres.getNiveauId(),
-                    criteres.getThematiqueId(),
-                    criteres.getTypeSupport(),
-                    criteres.getDifficulte(),
-                    criteres.getDureeMax(),
-                    criteres.getKeyword(),
-                    tagsNormalises,
-                    criteres.getUsagePedagogique());
-        } else {
-            // Fallback : tag unique (ancien comportement, compatibilité ascendante)
-            resultats = ressourceRepo.rechercherAvecCriteres(
-                    criteres.getNiveauId(),
-                    criteres.getThematiqueId(),
-                    criteres.getTypeSupport(),
-                    criteres.getDifficulte(),
-                    criteres.getDureeMax(),
-                    criteres.getKeyword(),
-                    criteres.getTag(),
-                    criteres.getUsagePedagogique());
-        }
-
+        List<RessourcePedagogique> resultats = ressourceRepo.rechercherAvecCriteres(
+                criteres.getNiveauId(),
+                criteres.getThematiqueId(),
+                criteres.getTypeSupport(),
+                criteres.getDifficulte(),
+                criteres.getDureeMax(),
+                criteres.getKeyword(),
+                criteres.getTag(),
+                criteres.getUsagePedagogique());
         return resultats.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
@@ -222,6 +201,11 @@ public class RessourcePedagogiqueService {
         if (dto.getTagIds() != null) {
             List<Tag> tags = tagRepo.findAllById(dto.getTagIds());
             entity.setTags(tags);
+        }
+
+        // Association au template (si fourni)
+        if (dto.getTemplateId() != null) {
+            templateRepo.findById(dto.getTemplateId()).ifPresent(entity::setTemplate);
         }
     }
 
