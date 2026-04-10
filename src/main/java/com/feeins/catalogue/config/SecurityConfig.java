@@ -147,6 +147,9 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/niveaux/**").permitAll()
                                                 .requestMatchers("/api/thematiques/**").permitAll()
                                                 .requestMatchers("/api/tags/**").permitAll()
+
+                                                // Routes publiques templates (étudiants/visiteurs)
+                                                // DOIT être avant la règle templates/** authentifiée
                                                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                                                                 "/api/templates/public")
                                                 .permitAll()
