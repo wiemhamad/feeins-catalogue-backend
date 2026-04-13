@@ -155,10 +155,26 @@ public class TemplatePedagogiqueController {
 
     @Operation(summary = "Supprimer un template", security = @SecurityRequirement(name = "bearerAuth"))
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRATEUR_PEDAGOGIQUE')")
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
     public ResponseEntity<Void> supprimerTemplate(@PathVariable Long id) {
-        templateRepo.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return templateRepo.findById(id).map(template -> {
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
+                    .getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_ADMINISTRATEUR_PEDAGOGIQUE".equals(a.getAuthority()));
+            // L'enseignant ne peut supprimer que ses propres templates
+            if (!isAdmin && template.getCreateurTemplate() != null &&
+                    !email.equalsIgnoreCase(template.getCreateurTemplate().getEmail())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
+            }
+            // Détacher les ressources avant de supprimer
+            ressourceRepo.findByTemplateId(id).forEach(r -> {
+                r.setTemplate(null);
+                ressourceRepo.save(r);
+            });
+            templateRepo.deleteById(id);
+            return ResponseEntity.noContent().<Void>build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @Operation(summary = "Associer des ressources à un template", security = @SecurityRequirement(name = "bearerAuth"))
