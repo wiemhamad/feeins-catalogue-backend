@@ -15,13 +15,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/niveaux")
 @CrossOrigin(origins = "*")
-@Tag(name = "🎓 Niveaux", description = "Référentiel des niveaux pédagogiques")
+@Tag(name = "🎓 Niveaux")
 public class NiveauController {
 
     @Autowired
     private NiveauRepository niveauRepo;
 
-    @Operation(summary = "Lister tous les niveaux")
     @GetMapping
     public List<Niveau> listerNiveaux() {
         return niveauRepo.findAll();

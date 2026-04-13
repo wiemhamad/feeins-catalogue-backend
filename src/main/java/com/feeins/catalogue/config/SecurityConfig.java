@@ -147,6 +147,9 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/niveaux/**").permitAll()
                                                 .requestMatchers("/api/thematiques/**").permitAll()
                                                 .requestMatchers("/api/tags/**").permitAll()
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/filtres-config/**")
+                                                .permitAll()
 
                                                 // ===== TEMPLATES PUBLICS (avant la règle templates/** auth) =====
                                                 .requestMatchers(org.springframework.http.HttpMethod.GET,

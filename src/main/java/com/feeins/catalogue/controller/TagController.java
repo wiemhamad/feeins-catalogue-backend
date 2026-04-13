@@ -14,19 +14,17 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/tags")
 @CrossOrigin(origins = "*")
-@io.swagger.v3.oas.annotations.tags.Tag(name = "🏷️ Tags", description = "Référentiel des tags")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "🏷️ Tags")
 public class TagController {
 
     @Autowired
     private TagRepository tagRepo;
 
-    @Operation(summary = "Lister tous les tags")
     @GetMapping
     public List<Tag> listerTags() {
         return tagRepo.findAll();
     }
 
-    @Operation(summary = "Récupérer un tag par ID")
     @GetMapping("/{id}")
     public ResponseEntity<Tag> getTag(@PathVariable Long id) {
         return tagRepo.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
