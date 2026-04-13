@@ -1,9 +1,11 @@
 package com.feeins.catalogue.controller;
 
+import com.feeins.catalogue.dto.AssocierRessourcesDTO;
+import com.feeins.catalogue.dto.TemplatePublicDTO;
+import com.feeins.catalogue.dto.RessourceResponseDTO;
 import com.feeins.catalogue.entity.*;
 import com.feeins.catalogue.repository.*;
 import com.feeins.catalogue.service.RessourcePedagogiqueService;
-import com.feeins.catalogue.dto.RessourceResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import com.feeins.catalogue.dto.AssocierRessourcesDTO;
 import java.util.stream.Collectors;
 
 @RestController
@@ -34,12 +35,37 @@ public class TemplatePedagogiqueController {
     @Autowired
     private RessourcePedagogiqueService ressourceService;
 
-    // ===== ACCÈS PUBLIC (étudiants et visiteurs) =====
+    // =========================================================
+    // ACCÈS PUBLIC — étudiants et visiteurs, sans token
+    // =========================================================
 
     @Operation(summary = "Lister tous les templates — public")
     @GetMapping("/public")
-    public List<TemplatePedagogique> listerPublic() {
-        return templateRepo.findAll();
+    @Transactional(readOnly = true)
+    public List<TemplatePublicDTO> listerPublic() {
+        return templateRepo.findAll().stream().map(t -> {
+            List<RessourcePedagogique> ressources = ressourceRepo.findByTemplateId(t.getId());
+            List<TemplatePublicDTO.RessourceResumeeDTO> resumes = ressources.stream()
+                    .filter(r -> r.getStatut() == RessourcePedagogique.StatutRessource.VALIDEE
+                            && Boolean.TRUE.equals(r.getVisible()))
+                    .map(r -> TemplatePublicDTO.RessourceResumeeDTO.builder()
+                            .id(r.getId())
+                            .titre(r.getTitre())
+                            .typeSupport(r.getTypeSupport() != null ? r.getTypeSupport().name() : null)
+                            .difficulte(r.getDifficulte() != null ? r.getDifficulte().name() : null)
+                            .dureeMinutes(r.getDureeMinutes())
+                            .build())
+                    .collect(Collectors.toList());
+            return TemplatePublicDTO.builder()
+                    .id(t.getId())
+                    .nom(t.getNom())
+                    .description(t.getDescription())
+                    .modifiable(t.getModifiable())
+                    .createurNom(t.getCreateurTemplate() != null ? t.getCreateurTemplate().getNom() : null)
+                    .nbRessources(resumes.size())
+                    .ressources(resumes)
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     @Operation(summary = "Détail d'un template — public")
@@ -50,15 +76,11 @@ public class TemplatePedagogiqueController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /**
-     * Ressources d'un template — PUBLIC
-     * Retourne uniquement les ressources VALIDÉES associées à ce template.
-     * C'est ce que voit l'étudiant quand il clique sur un template.
-     */
     @Operation(summary = "Ressources d'un template — public")
     @GetMapping("/public/{id}/ressources")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<RessourceResponseDTO>> ressourcesPublic(@PathVariable Long id) {
-        return templateRepo.findById(id).map(template -> {
+        return templateRepo.findById(id).map(t -> {
             List<RessourceResponseDTO> dtos = ressourceRepo.findByTemplateId(id)
                     .stream()
                     .filter(r -> r.getStatut() == RessourcePedagogique.StatutRessource.VALIDEE
@@ -69,7 +91,9 @@ public class TemplatePedagogiqueController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // ===== ACCÈS AUTHENTIFIÉ =====
+    // =========================================================
+    // ACCÈS AUTHENTIFIÉ — enseignant et admin
+    // =========================================================
 
     @Operation(summary = "Lister tous les templates", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping
@@ -90,6 +114,13 @@ public class TemplatePedagogiqueController {
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
     public List<TemplatePedagogique> listerModifiables() {
         return templateRepo.findByModifiable(true);
+    }
+
+    @Operation(summary = "Lister les templates clé en main", security = @SecurityRequirement(name = "bearerAuth"))
+    @GetMapping("/cle-en-main")
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
+    public List<TemplatePedagogique> listerCleEnMain() {
+        return templateRepo.findByModifiable(false);
     }
 
     @Operation(summary = "Créer un template", security = @SecurityRequirement(name = "bearerAuth"))
@@ -130,48 +161,27 @@ public class TemplatePedagogiqueController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Associer une liste de ressources à un template.
-     * L'enseignant envoie { "ressourceIds": [1, 2, 3] }
-     * Le backend met à jour le champ template_id dans chaque ressource.
-     */
     @Operation(summary = "Associer des ressources à un template", security = @SecurityRequirement(name = "bearerAuth"))
     @PutMapping("/{id}/ressources")
     @Transactional
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'ADMINISTRATEUR_PEDAGOGIQUE')")
-    public ResponseEntity<?> associerRessources(
-            @PathVariable Long id,
+    public ResponseEntity<?> associerRessources(@PathVariable Long id,
             @RequestBody AssocierRessourcesDTO body) {
-
         return templateRepo.findById(id).map(template -> {
-            List<Long> ressourceIds = body.getRessourceIds() != null ? body.getRessourceIds() : List.of();
-
-            // D'abord, détacher toutes les ressources actuellement liées à ce template
+            List<Long> ids = body.getRessourceIds() != null ? body.getRessourceIds() : List.of();
+            // Détacher les anciennes ressources
             ressourceRepo.findByTemplateId(id).forEach(r -> {
                 r.setTemplate(null);
                 ressourceRepo.save(r);
             });
-
-            // Ensuite, attacher les nouvelles ressources sélectionnées
-            final TemplatePedagogique t = template;
-            for (Long rid : ressourceIds) {
-                ressourceRepo.findById(rid).ifPresent(r -> {
-                    r.setTemplate(t);
-                    ressourceRepo.save(r);
-                });
-            }
-
-            // Retourner le template avec les ressources mises à jour
+            // Attacher les nouvelles
+            ids.forEach(rid -> ressourceRepo.findById(rid).ifPresent(r -> {
+                r.setTemplate(template);
+                ressourceRepo.save(r);
+            }));
             List<RessourceResponseDTO> dtos = ressourceRepo.findByTemplateId(id)
-                    .stream()
-                    .map(ressourceService::toDTO)
-                    .collect(Collectors.toList());
-
-            return ResponseEntity.ok(Map.of(
-                    "message", "Ressources associées avec succès",
-                    "templateId", id,
-                    "nbRessources", dtos.size(),
-                    "ressources", dtos));
+                    .stream().map(ressourceService::toDTO).collect(Collectors.toList());
+            return ResponseEntity.ok(Map.of("nbRessources", dtos.size(), "ressources", dtos));
         }).orElse(ResponseEntity.notFound().build());
     }
 }

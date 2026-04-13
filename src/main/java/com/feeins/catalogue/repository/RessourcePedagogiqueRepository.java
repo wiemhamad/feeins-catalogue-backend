@@ -22,26 +22,27 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
 
         List<RessourcePedagogique> findByStatut(RessourcePedagogique.StatutRessource statut);
 
-        // Ressources validées et visibles (catalogue public)
+        // Ressources validées et visibles (accessibles sans authentification)
         List<RessourcePedagogique> findByStatutAndVisibleTrueOrderByDateCreationDesc(
                         RessourcePedagogique.StatutRessource statut);
 
         List<RessourcePedagogique> findByDureeMinutesLessThanEqual(Integer dureeMax);
 
-        // Ressources du contributeur connecté
+        // Ressources du contributeur connecté (par son ID)
         List<RessourcePedagogique> findByContributeurId(Long contributeurId);
 
+        // Ressources du contributeur connecté (par son email)
         List<RessourcePedagogique> findByContributeurEmailOrderByDateCreationDesc(String email);
 
         Optional<RessourcePedagogique> findByNomenclature(String nomenclature);
 
-        // Ressources associées à un template (pour l'enseignant)
-        List<RessourcePedagogique> findByTemplateId(Long templateId);
-
         @Query("SELECT COUNT(r) FROM RessourcePedagogique r WHERE r.typeSupport = :type")
         Long countByTypeSupport(@Param("type") RessourcePedagogique.TypeSupport type);
 
-        // Recherche multicritères — 1 tag
+        /**
+         * Recherche multicritères publique — accessible sans authentification.
+         * Retourne uniquement les ressources VALIDEES et visibles.
+         */
         @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
                         "LEFT JOIN r.tags t " +
                         "WHERE (:niveauId IS NULL OR r.niveau.id = :niveauId) " +
@@ -54,7 +55,8 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         "LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
                         "AND (:tag IS NULL OR :tag = '' OR LOWER(t.libelle) = LOWER(:tag)) " +
                         "AND (:usagePedagogique IS NULL OR r.usagePedagogique = :usagePedagogique) " +
-                        "AND r.statut = 'VALIDEE' AND r.visible = true")
+                        "AND r.statut = 'VALIDEE' " +
+                        "AND r.visible = true")
         List<RessourcePedagogique> rechercherAvecCriteres(
                         @Param("niveauId") Long niveauId,
                         @Param("thematiqueId") Long thematiqueId,
@@ -65,27 +67,10 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         @Param("tag") String tag,
                         @Param("usagePedagogique") RessourcePedagogique.UsagePedagogique usagePedagogique);
 
-        // Recherche multicritères — multi-tags (OR)
         @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
-                        "LEFT JOIN r.tags t " +
-                        "WHERE (:niveauId IS NULL OR r.niveau.id = :niveauId) " +
-                        "AND (:thematiqueId IS NULL OR r.thematique.id = :thematiqueId) " +
-                        "AND (:typeSupport IS NULL OR r.typeSupport = :typeSupport) " +
-                        "AND (:difficulte IS NULL OR r.difficulte = :difficulte) " +
-                        "AND (:dureeMax IS NULL OR r.dureeMinutes <= :dureeMax) " +
-                        "AND (:keyword IS NULL OR :keyword = '' OR " +
-                        "LOWER(r.titre) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                        "LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-                        "AND (:#{#tags == null || #tags.isEmpty()} = true OR LOWER(t.libelle) IN :tags) " +
-                        "AND (:usagePedagogique IS NULL OR r.usagePedagogique = :usagePedagogique) " +
-                        "AND r.statut = 'VALIDEE' AND r.visible = true")
-        List<RessourcePedagogique> rechercherAvecCriteresEtTags(
-                        @Param("niveauId") Long niveauId,
-                        @Param("thematiqueId") Long thematiqueId,
-                        @Param("typeSupport") RessourcePedagogique.TypeSupport typeSupport,
-                        @Param("difficulte") RessourcePedagogique.Difficulte difficulte,
-                        @Param("dureeMax") Integer dureeMax,
-                        @Param("keyword") String keyword,
-                        @Param("tags") List<String> tags,
-                        @Param("usagePedagogique") RessourcePedagogique.UsagePedagogique usagePedagogique);
+                        "LEFT JOIN FETCH r.tags " +
+                        "LEFT JOIN FETCH r.niveau " +
+                        "LEFT JOIN FETCH r.thematique " +
+                        "WHERE r.template.id = :templateId")
+        List<RessourcePedagogique> findByTemplateId(@Param("templateId") Long templateId);
 }
