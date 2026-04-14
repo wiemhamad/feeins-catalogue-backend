@@ -37,14 +37,34 @@ public class AuthService {
         Utilisateur utilisateur = utilisateurRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
+        Utilisateur.TypeUtilisateur type = detecterType(utilisateur);
+
         return AuthResponse.builder()
                 .token(jwt)
                 .type("Bearer")
                 .id(utilisateur.getId())
                 .nom(utilisateur.getNom())
                 .email(utilisateur.getEmail())
-                .typeUtilisateur(utilisateur.getTypeUtilisateur())
+                .typeUtilisateur(type)
                 .build();
+    }
+
+    // ===== DÉTECTER LE TYPE RÉEL DE L'UTILISATEUR =====
+    private Utilisateur.TypeUtilisateur detecterType(Utilisateur u) {
+        if (u instanceof AdministrateurPedagogique)
+            return Utilisateur.TypeUtilisateur.ADMINISTRATEUR_PEDAGOGIQUE;
+        if (u instanceof Enseignant)
+            return Utilisateur.TypeUtilisateur.ENSEIGNANT;
+        if (u instanceof Contributeur)
+            return Utilisateur.TypeUtilisateur.CONTRIBUTEUR;
+        if (u instanceof Etudiant)
+            return Utilisateur.TypeUtilisateur.ETUDIANT;
+        if (u instanceof ConsultantExterne)
+            return Utilisateur.TypeUtilisateur.CONSULTANT_EXTERNE;
+        // Fallback sur le discriminateur
+        if (u.getTypeUtilisateur() != null)
+            return u.getTypeUtilisateur();
+        return Utilisateur.TypeUtilisateur.ETUDIANT;
     }
 
     // ===== INSCRIPTION =====
@@ -77,13 +97,15 @@ public class AuthService {
 
         String jwt = jwtUtils.generateTokenFromEmail(utilisateur.getEmail());
 
+        Utilisateur.TypeUtilisateur typeDetecte = detecterType(utilisateur);
+
         return AuthResponse.builder()
                 .token(jwt)
                 .type("Bearer")
                 .id(utilisateur.getId())
                 .nom(utilisateur.getNom())
                 .email(utilisateur.getEmail())
-                .typeUtilisateur(utilisateur.getTypeUtilisateur())
+                .typeUtilisateur(typeDetecte)
                 .build();
     }
 
