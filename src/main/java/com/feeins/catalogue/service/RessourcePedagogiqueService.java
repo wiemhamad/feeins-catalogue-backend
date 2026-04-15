@@ -121,7 +121,8 @@ public class RessourcePedagogiqueService {
     // ===== RECHERCHE AVANCÉE (public, sans authentification) =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> rechercherRessources(RechercheRequestDTO criteres) {
-        List<RessourcePedagogique> resultats = ressourceRepo.rechercherAvecCriteres(
+        // Étape 1 : filtrer les IDs (requête légère sans FETCH)
+        List<Long> ids = ressourceRepo.filtrerIds(
                 criteres.getNiveauId(),
                 criteres.getThematiqueId(),
                 criteres.getTypeSupport(),
@@ -129,7 +130,11 @@ public class RessourcePedagogiqueService {
                 criteres.getDureeMax(),
                 criteres.getKeyword(),
                 criteres.getTag());
-        return resultats.stream().map(this::toDTO).collect(Collectors.toList());
+        if (ids.isEmpty())
+            return List.of();
+        // Étape 2 : charger les entités complètes avec JOIN FETCH
+        return ressourceRepo.findByIdsFetch(ids)
+                .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     // ===== AJOUTER TAG =====

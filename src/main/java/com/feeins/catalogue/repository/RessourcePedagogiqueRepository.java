@@ -12,8 +12,6 @@ import java.util.Optional;
 @Repository
 public interface RessourcePedagogiqueRepository extends JpaRepository<RessourcePedagogique, Long> {
 
-        // ===== REQUÊTES DE BASE =====
-
         Optional<RessourcePedagogique> findByNomenclature(String nomenclature);
 
         List<RessourcePedagogique> findByContributeurId(Long contributeurId);
@@ -21,9 +19,7 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
         @Query("SELECT COUNT(r) FROM RessourcePedagogique r WHERE r.typeSupport = :type")
         Long countByTypeSupport(@Param("type") RessourcePedagogique.TypeSupport type);
 
-        // ===== CATALOGUE PUBLIC — JOIN FETCH évite le problème N+1 =====
-        // Une seule requête SQL charge tout : ressources + tags + niveau + thématique
-
+        // ===== CATALOGUE PUBLIC — tout chargé en 1 requête =====
         @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
                         "LEFT JOIN FETCH r.tags " +
                         "LEFT JOIN FETCH r.niveau " +
@@ -40,7 +36,6 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         "ORDER BY r.dateCreation DESC")
         List<RessourcePedagogique> findAllFetch();
 
-        // Contributeur : ses ressources avec tout chargé
         @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
                         "LEFT JOIN FETCH r.tags " +
                         "LEFT JOIN FETCH r.niveau " +
@@ -49,7 +44,6 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         "ORDER BY r.dateCreation DESC")
         List<RessourcePedagogique> findByContributeurEmailFetch(@Param("email") String email);
 
-        // Ressources d'un template avec tout chargé
         @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
                         "LEFT JOIN FETCH r.tags " +
                         "LEFT JOIN FETCH r.niveau " +
@@ -57,12 +51,9 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         "WHERE r.template.id = :templateId")
         List<RessourcePedagogique> findByTemplateId(@Param("templateId") Long templateId);
 
-        // ===== RECHERCHE MULTICRITÈRES — une seule requête avec tous les filtres =====
-
-        @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
-                        "LEFT JOIN FETCH r.tags tFetch " +
-                        "LEFT JOIN FETCH r.niveau " +
-                        "LEFT JOIN FETCH r.thematique " +
+        // ===== ÉTAPE 1 : filtrer les IDs (requête simple, pas de FETCH) =====
+        // Séparer le filtrage du chargement évite le conflit double-JOIN sur tags
+        @Query("SELECT DISTINCT r.id FROM RessourcePedagogique r " +
                         "LEFT JOIN r.tags t " +
                         "WHERE (:niveauId IS NULL OR r.niveau.id = :niveauId) " +
                         "AND (:thematiqueId IS NULL OR r.thematique.id = :thematiqueId) " +
@@ -74,7 +65,7 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         "     LOWER(r.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
                         "AND (:tag IS NULL OR :tag = '' OR LOWER(t.libelle) = LOWER(:tag)) " +
                         "AND r.statut = 'VALIDEE' AND r.visible = true")
-        List<RessourcePedagogique> rechercherAvecCriteres(
+        List<Long> filtrerIds(
                         @Param("niveauId") Long niveauId,
                         @Param("thematiqueId") Long thematiqueId,
                         @Param("typeSupport") RessourcePedagogique.TypeSupport typeSupport,
@@ -82,4 +73,14 @@ public interface RessourcePedagogiqueRepository extends JpaRepository<RessourceP
                         @Param("dureeMax") Integer dureeMax,
                         @Param("keyword") String keyword,
                         @Param("tag") String tag);
+
+        // ===== ÉTAPE 2 : charger par IDs avec FETCH (toutes relations en 1 requête)
+        // =====
+        @Query("SELECT DISTINCT r FROM RessourcePedagogique r " +
+                        "LEFT JOIN FETCH r.tags " +
+                        "LEFT JOIN FETCH r.niveau " +
+                        "LEFT JOIN FETCH r.thematique " +
+                        "WHERE r.id IN :ids " +
+                        "ORDER BY r.dateCreation DESC")
+        List<RessourcePedagogique> findByIdsFetch(@Param("ids") List<Long> ids);
 }
