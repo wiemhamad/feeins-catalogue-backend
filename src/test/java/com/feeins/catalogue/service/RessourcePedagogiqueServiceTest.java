@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,7 +26,6 @@ class RessourcePedagogiqueServiceTest {
     private RessourcePedagogiqueService ressourceService;
 
     private RessourcePedagogique ressource;
-    private RessourceResponseDTO ressourceDTO;
 
     @BeforeEach
     void setUp() {
@@ -36,44 +34,47 @@ class RessourcePedagogiqueServiceTest {
         ressource.setTitre("Test Ressource");
         ressource.setStatut(RessourcePedagogique.StatutRessource.VALIDEE);
         ressource.setVisible(true);
-
-        ressourceDTO = RessourceResponseDTO.builder()
-                .id(1L)
-                .titre("Test Ressource")
-                .statut(RessourcePedagogique.StatutRessource.VALIDEE)
-                .visible(true)
-                .build();
+        ressource.setTags(new java.util.ArrayList<>());
     }
 
     @Test
     void listerRessourcesValidees_ReturnsList() {
-        // Arrange
-        List<RessourcePedagogique> ressources = Arrays.asList(ressource);
-        when(ressourceRepository.findByStatutAndVisibleTrueOrderByDateCreationDesc(
-                RessourcePedagogique.StatutRessource.VALIDEE)).thenReturn(ressources);
-
-        // Mock the toDTO method - since it's private, we need to mock the behavior
-        // For simplicity, we'll assume toDTO returns the expected DTO
+        // Arrange - utilise findValideesFetch (nouvelle méthode optimisée)
+        when(ressourceRepository.findValideesFetch())
+                .thenReturn(Arrays.asList(ressource));
 
         // Act
         List<RessourceResponseDTO> result = ressourceService.listerRessourcesValidees();
 
         // Assert
+        assertNotNull(result);
         assertEquals(1, result.size());
-        // Note: This test would need adjustment to properly mock the toDTO method
-        // For now, it demonstrates the structure
+        assertEquals("Test Ressource", result.get(0).getTitre());
+        assertEquals(RessourcePedagogique.StatutRessource.VALIDEE, result.get(0).getStatut());
     }
 
     @Test
     void listerToutesRessources_ReturnsList() {
-        // Arrange
-        List<RessourcePedagogique> ressources = Arrays.asList(ressource);
-        when(ressourceRepository.findAll()).thenReturn(ressources);
+        // Arrange - utilise findAllFetch (nouvelle méthode optimisée)
+        when(ressourceRepository.findAllFetch())
+                .thenReturn(Arrays.asList(ressource));
 
         // Act
         List<RessourceResponseDTO> result = ressourceService.listerToutesRessources();
 
         // Assert
+        assertNotNull(result);
         assertEquals(1, result.size());
+    }
+
+    @Test
+    void listerRessourcesValidees_EmptyList() {
+        when(ressourceRepository.findValideesFetch())
+                .thenReturn(List.of());
+
+        List<RessourceResponseDTO> result = ressourceService.listerRessourcesValidees();
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
     }
 }

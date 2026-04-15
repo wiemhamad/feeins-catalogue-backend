@@ -99,15 +99,14 @@ public class RessourcePedagogiqueService {
     // ===== LISTE VALIDÉES (public, sans authentification) =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> listerRessourcesValidees() {
-        return ressourceRepo.findByStatutAndVisibleTrueOrderByDateCreationDesc(
-                RessourcePedagogique.StatutRessource.VALIDEE)
+        return ressourceRepo.findValideesFetch()
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     // ===== TOUTES (admin seulement) =====
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> listerToutesRessources() {
-        return ressourceRepo.findAll()
+        return ressourceRepo.findAllFetch()
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
@@ -115,7 +114,7 @@ public class RessourcePedagogiqueService {
     @Transactional(readOnly = true)
     public List<RessourceResponseDTO> listerRessourcesDuContributeurConnecte() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ressourceRepo.findByContributeurEmailOrderByDateCreationDesc(email)
+        return ressourceRepo.findByContributeurEmailFetch(email)
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
@@ -129,8 +128,7 @@ public class RessourcePedagogiqueService {
                 criteres.getDifficulte(),
                 criteres.getDureeMax(),
                 criteres.getKeyword(),
-                criteres.getTag(),
-                criteres.getUsagePedagogique());
+                criteres.getTag());
         return resultats.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
@@ -201,11 +199,6 @@ public class RessourcePedagogiqueService {
         if (dto.getTagIds() != null) {
             List<Tag> tags = tagRepo.findAllById(dto.getTagIds());
             entity.setTags(tags);
-        }
-
-        // Association au template (si fourni)
-        if (dto.getTemplateId() != null) {
-            templateRepo.findById(dto.getTemplateId()).ifPresent(entity::setTemplate);
         }
     }
 
